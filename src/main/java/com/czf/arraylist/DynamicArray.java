@@ -5,7 +5,8 @@ import java.util.Iterator;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-public class DynamicArray {
+
+public class DynamicArray implements Iterable<Integer> {
     private int size = 0; // 逻辑大小
     private int capacity = 8; // 容量
     private int[] array = {};
@@ -100,4 +101,8 @@ public class DynamicArray {
     }
 
 
+    @Override
+    public Iterator<Integer> iterator() {
+        return null;
+    }
 }
