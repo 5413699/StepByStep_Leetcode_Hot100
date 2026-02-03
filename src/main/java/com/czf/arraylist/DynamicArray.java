@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-public class DynamicArray implements Iterable<Integer> {
+public class DynamicArray {
     private int size = 0; // 逻辑大小
     private int capacity = 8; // 容量
     private int[] array = {};
@@ -99,32 +99,5 @@ public class DynamicArray implements Iterable<Integer> {
         }
     }
 
-    /**
-     * 遍历方法2 - 迭代器遍历
-     */
-    @Override
-    public Iterator<Integer> iterator() {
-        return new Iterator<Integer>() {
-            int i = 0;
 
-            @Override
-            public boolean hasNext() { // 有没有下一个元素
-                return i < size;
-            }
-
-            @Override
-            public Integer next() { // 返回当前元素,并移动到下一个元素
-                return array[i++];
-            }
-        };
-    }
-
-    /**
-     * 遍历方法3 - stream 遍历
-     *
-     * @return stream 流
-     */
-    public IntStream stream() {
-        return IntStream.of(Arrays.copyOfRange(array, 0, size));
-    }
 }
