@@ -112,15 +112,18 @@ public class DynamicArray implements Iterable<Integer> {
          */
 
         return new Iterator<Integer>() {
-
+            // i代表当前索引的位置，从数组头部开始遍历
+            int i=0;
             @Override
             public boolean hasNext() {//判断是否还有下一个元素。
-                return false;
+                // 判断当前索引是否小于数组长度
+                return i<size;
             }
 
+            // 返回当前元素的位置
             @Override
-            public Integer next() {//返回当前元素。并移动到下一个元素。
-                return 0;
+            public Integer next() {//先返回当前元素。再移动到下一个元素。
+                return array[i++];
             }
         };
     }
