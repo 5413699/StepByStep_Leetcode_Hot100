@@ -127,4 +127,16 @@ public class DynamicArray implements Iterable<Integer> {
             }
         };
     }
+
+    /**
+     * 遍历方法3 - stream 遍历
+     *
+     * @return stream 流
+     */
+    public IntStream stream(){
+        // .of方法可以将数组转换成stream流
+        // 但是不能将array当成数组传给of方法
+        // 因为这样数组的有效部分还是无效部分都会被遍历
+        return IntStream.of(array);
+    }
 }

@@ -44,4 +44,20 @@ public class TestDynamicArray {
         }
 
     }
+
+    @Test
+    @DisplayName("测试使用流的方式进行遍历")
+    public void test3() {
+        DynamicArray dynamicArray = new DynamicArray();
+        dynamicArray.addLast(1);
+        dynamicArray.addLast(2);
+        dynamicArray.addLast(3);
+        dynamicArray.addLast(4);
+
+        //既然是流了，我们就可以调用stream里的一些方法，比如forEach
+        //此时会发现不对，不光遍历了有效的1234，还遍历了无效的0，0，0，0
+        dynamicArray.stream().forEach(element -> {
+            System.out.println(element);
+        });
+    }
 }
