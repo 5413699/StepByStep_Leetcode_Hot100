@@ -103,6 +103,25 @@ public class DynamicArray implements Iterable<Integer> {
 
     @Override
     public Iterator<Integer> iterator() {
-        return null;
+        /**
+         * 根据接口的抽象方法签名可以看出，我们需要返回一个Iterator<Integer>类型的变量，
+         * 因此我们创建对象返回。（匿名内部类）
+         * Iterator有两个需要实现的方法：
+         * 1. boolean hasNext()：判断是否还有下一个元素。
+         * 2. E next()：返回下一个元素。
+         */
+
+        return new Iterator<Integer>() {
+
+            @Override
+            public boolean hasNext() {//判断是否还有下一个元素。
+                return false;
+            }
+
+            @Override
+            public Integer next() {//返回当前元素。并移动到下一个元素。
+                return 0;
+            }
+        };
     }
 }
