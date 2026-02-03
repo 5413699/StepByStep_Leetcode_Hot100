@@ -25,5 +25,23 @@ public class TestDynamicArray {
         });
     }
 
+    @Test
+    @DisplayName("测试使用迭代器进行遍历")
+    public void test2() {
+        DynamicArray dynamicArray = new DynamicArray();
+        dynamicArray.addLast(1);
+        dynamicArray.addLast(2);
+        dynamicArray.addLast(3);
+        dynamicArray.addLast(4);
 
+        // 使用增强for循环进行遍历
+        // 增强for循环的内部就是
+        // 在每次循环时调用迭代器的hasnext方法看看有没有下一个元素，如果有，就继续循环
+        // 每次循环时调用next方法，将获取到的当前元素赋值给element，并移动指针
+        //！因此如果没有实现迭代器，增强for循环就无法使用。
+        for (Integer element : dynamicArray) {
+            System.out.println(element);
+        }
+
+    }
 }
