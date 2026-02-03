@@ -55,9 +55,10 @@ public class TestDynamicArray {
         dynamicArray.addLast(4);
 
         //既然是流了，我们就可以调用stream里的一些方法，比如forEach
-        //此时会发现不对，不光遍历了有效的1234，还遍历了无效的0，0，0，0
+        //修改后，会发现此次仅遍历了有效的1234，成功
         dynamicArray.stream().forEach(element -> {
             System.out.println(element);
         });
     }
+
 }

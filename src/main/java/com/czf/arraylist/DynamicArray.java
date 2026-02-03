@@ -137,6 +137,8 @@ public class DynamicArray implements Iterable<Integer> {
         // .of方法可以将数组转换成stream流
         // 但是不能将array当成数组传给of方法
         // 因为这样数组的有效部分还是无效部分都会被遍历
-        return IntStream.of(array);
+        // 所以需要使用Arrays.copyOfRange方法, 将array的有效部分转换成stream流
+        // 注意这里的区间是含头不含尾的
+        return IntStream.of(Arrays.copyOfRange(array, 0, size));
     }
 }
