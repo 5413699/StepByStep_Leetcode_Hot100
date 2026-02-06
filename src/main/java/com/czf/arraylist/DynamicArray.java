@@ -59,7 +59,23 @@ public class DynamicArray implements Iterable<Integer> {
         }
     }
 
-
+    /**
+     * 从 [0 .. size) 范围删除元素
+     *
+     * @param index 索引位置
+     * @return 被删除元素
+     */
+    public int remove(int index) {//假设只输入有效的索引
+        // 1.先编写返回值，找到被删除的元素,将其作为返回值
+        int removed = array[index];
+        // 2.删除逻辑
+        // 先找到后面的元素，将其往前移，最后将size-1
+        // 数组内移动元素，用system.arraycopy即可
+        System.arraycopy(array, index + 1,
+                array,index,size-index-1);
+        size--;
+        return removed;
+    }
 
 
     /**

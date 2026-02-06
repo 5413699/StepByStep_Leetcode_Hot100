@@ -61,4 +61,22 @@ public class TestDynamicArray {
         });
     }
 
+
+    @Test
+    @DisplayName("测试删除")
+    public void test4() {
+        DynamicArray dynamicArray = new DynamicArray();
+        dynamicArray.addLast(1);
+        dynamicArray.addLast(2);
+        dynamicArray.addLast(3);
+        dynamicArray.addLast(4);
+        // 删除索引为2的元素进行测试
+        int removed = dynamicArray.remove(2);
+        System.out.println(removed);
+        System.out.println("-------");
+        // 使用流的方法进行打印，遍历删除后的数组元素
+        dynamicArray.stream().forEach(element -> {
+            System.out.println(element);
+        });
+    }
 }
