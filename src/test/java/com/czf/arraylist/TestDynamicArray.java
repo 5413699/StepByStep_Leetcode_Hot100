@@ -79,4 +79,20 @@ public class TestDynamicArray {
             System.out.println(element);
         });
     }
+
+    @Test
+    @DisplayName("测试删除-使用断言")
+    public void test5() {
+        DynamicArray dynamicArray = new DynamicArray();
+        dynamicArray.addLast(1);
+        dynamicArray.addLast(2);
+        dynamicArray.addLast(3);
+        dynamicArray.addLast(4);
+        // 删除索引为2的元素进行测试
+        int removed = dynamicArray.remove(2);
+        // 使用断言测试删除后的元素是否为3
+        assertEquals(3,removed);
+        // 比较两个集合是否一致
+        assertIterableEquals(List.of(1,2,4),dynamicArray);
+    }
 }
