@@ -71,8 +71,12 @@ public class DynamicArray implements Iterable<Integer> {
         // 2.删除逻辑
         // 先找到后面的元素，将其往前移，最后将size-1
         // 数组内移动元素，用system.arraycopy即可
-        System.arraycopy(array, index + 1,
+        // 3.当前代码存在可优化的地方，当删除的元素是最后一个元素时，会变成移动0个元素
+        // 并不会报错，但添加if进行判断后，逻辑上更合理
+        if (index < size - 1) {
+            System.arraycopy(array, index + 1,
                 array,index,size-index-1);
+        }
         size--;
         return removed;
     }
