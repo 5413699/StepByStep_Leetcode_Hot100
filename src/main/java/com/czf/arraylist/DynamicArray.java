@@ -33,6 +33,20 @@ public class DynamicArray implements Iterable<Integer> {
      * @param element 待添加元素
      */
     public void add(int index, int element) {
+        // 检查容量，容量不足时进行扩容
+        // 选中要转换为函数的代码，鼠标右键 ->重构->提取方法即可将代码转换为函数
+        checkAndGrow();
+        // 添加逻辑
+        if (index >= 0 && index < size) {
+            // 向后挪动, 空出待插入位置
+            System.arraycopy(array, index,
+                    array, index + 1, size - index);
+        }
+        array[index] = element;
+        size++;
+    }
+
+    private void checkAndGrow() {
         // 在添加前，需要做容量检查，若容量不够，则扩容
         // 当size=capacity时，需要扩容
         if (size >= capacity) {
@@ -49,14 +63,6 @@ public class DynamicArray implements Iterable<Integer> {
             //4,用新数组指向旧数组
             array = newArray;
         }
-        // 添加逻辑
-        if (index >= 0 && index < size) {
-            // 向后挪动, 空出待插入位置
-            System.arraycopy(array, index,
-                    array, index + 1, size - index);
-        }
-        array[index] = element;
-        size++;
     }
 
 
