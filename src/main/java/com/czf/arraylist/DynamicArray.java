@@ -42,6 +42,12 @@ public class DynamicArray implements Iterable<Integer> {
             //因此我们采用移位的方法进行扩容，右移一位相当于除以2，再加上原容量，就相当于1.5倍了
             //capacity = capacity + (capacity >> 1);
             capacity += capacity >> 1;
+            //2.创建新的数组
+            int[] newArray = new int[capacity];
+            //3.将原数组的元素复制到新的数组中
+            System.arraycopy(array, 0, newArray, 0, size);
+            //4,用新数组指向旧数组
+            array = newArray;
         }
         // 添加逻辑
         if (index >= 0 && index < size) {
