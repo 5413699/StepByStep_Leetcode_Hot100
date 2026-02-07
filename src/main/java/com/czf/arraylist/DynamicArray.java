@@ -7,6 +7,15 @@ import java.util.stream.IntStream;
 
 
 public class DynamicArray implements Iterable<Integer> {
+    /**
+     * 动态数组
+     * 根据索引查询：O(1),根据索引，直接计算元素地址
+     * 根据值查询：O(n),只能通过遍历查找
+     * 插入：头部/中间：O(n),需要将其他元素向后移动1位
+     * 尾部插入：O(1),直接在数组最后添加元素（扩容频率低，被均摊了）
+     *
+     */
+
     private int size = 0; // 逻辑大小
     private int capacity = 8; // 容量
     // 用这种写法，假如创建后没有给数组赋值，也会额外占用capacity个元素的空间
