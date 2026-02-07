@@ -9,6 +9,10 @@ import java.util.stream.IntStream;
 public class DynamicArray implements Iterable<Integer> {
     private int size = 0; // 逻辑大小
     private int capacity = 8; // 容量
+    // 用这种写法，假如创建后没有给数组赋值，也会额外占用capacity个元素的空间
+    // 就白白浪费了，private int[] array = new int[capacity];
+    // 因此我们选择先创建一个空数组，添加元素时再通过扩容方法创建空间
+    // 懒汉式创建数组
     private int[] array = {};
 
     public int[] array() {
@@ -47,9 +51,14 @@ public class DynamicArray implements Iterable<Integer> {
     }
 
     private void checkAndGrow() {
+        // 实现懒汉式初始化数组
+        // 从0扩容到初始容量8
+        if (size == 0) {
+            array = new int[capacity];
+        }
         // 在添加前，需要做容量检查，若容量不够，则扩容
         // 当size=capacity时，需要扩容
-        if (size >= capacity) {
+        else if (size >= capacity) {
             //进行扩容
             //1.新的容量比旧的容量大多少合适
             //Java中是扩容为1.5倍，但我们不能直接乘以1.5，因为容量是整数，不能乘小数
