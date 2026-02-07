@@ -95,4 +95,21 @@ public class TestDynamicArray {
         // 比较两个集合是否一致
         assertIterableEquals(List.of(1,2,4),dynamicArray);
     }
+
+    @Test
+    @DisplayName("测试扩容")
+    public void test6() {
+        DynamicArray dynamicArray = new DynamicArray();
+        // 添加9个元素进行测试（需要进行两次扩容，初始化扩容和超过初始容量8的扩容）
+        for (int i = 0; i < 9; i++) {
+            dynamicArray.addLast(i + 1);
+        }
+        // 若添加成功，元素顺序应该为1-9
+        assertIterableEquals(
+                List.of(1, 2, 3, 4, 5, 6, 7, 8, 9),
+                dynamicArray
+        );
+    }
+
+
 }
