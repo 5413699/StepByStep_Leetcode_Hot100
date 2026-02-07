@@ -33,6 +33,16 @@ public class DynamicArray implements Iterable<Integer> {
      * @param element 待添加元素
      */
     public void add(int index, int element) {
+        // 在添加前，需要做容量检查，若容量不够，则扩容
+        // 当size=capacity时，需要扩容
+        if (size >= capacity) {
+            //进行扩容
+            //1.新的容量比旧的容量大多少合适
+            //Java中是扩容为1.5倍，但我们不能直接乘以1.5，因为容量是整数，不能乘小数
+            //因此我们采用移位的方法进行扩容，右移一位相当于除以2，再加上原容量，就相当于1.5倍了
+            //capacity = capacity + (capacity >> 1);
+            capacity += capacity >> 1;
+        }
         // 添加逻辑
         if (index >= 0 && index < size) {
             // 向后挪动, 空出待插入位置
