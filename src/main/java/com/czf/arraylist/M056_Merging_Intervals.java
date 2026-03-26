@@ -42,8 +42,14 @@ public class M056_Merging_Intervals {
                 end = Math.max(end , intervals[i][1]);
             }
 
-            // 假如没有重合
-
+            // 假如当前区间没有重合：[1,6]、[8,10]
+            else {
+                // 那么[1,6]可以作为结果的一部分加入结果数组中
+                result.add(new int[]{start, end});
+                // 并使得新的区间为下一区间
+                start = intervals[i][0];
+                end = intervals[i][1];
+            }
 
 
         }
