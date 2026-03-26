@@ -50,12 +50,10 @@ public class M056_Merging_Intervals {
                 start = intervals[i][0];
                 end = intervals[i][1];
             }
-
-
         }
-
-
-        return intervals;
+        //  循环结束后，最后那个区间 [start, end] 没有被加入 result
+        result.add(new int[]{start, end});
+        return result;
     }
 
     public static void main(String[] args) {
