@@ -17,7 +17,7 @@ public class M056_Merging_Intervals {
 
 
 
-    public int[][] merge(int[][] intervals) {
+    public static int[][] merge(int[][] intervals) {
         // 输入intervals {{1,3},{2,6}，{8，10}，{15，18}}
         // 特殊情况处理：空数组或只有一个区间
         if (intervals == null || intervals.length <= 1) {
@@ -51,9 +51,11 @@ public class M056_Merging_Intervals {
                 end = intervals[i][1];
             }
         }
-        //  循环结束后，最后那个区间 [start, end] 没有被加入 result
+        // 循环结束后，最后那个区间 [start, end] 没有被加入 result
         result.add(new int[]{start, end});
-        return result;
+
+        // result 是 List<int[]>，但函数返回值要求是 int[][]，因此返回时要手动转换
+        return result.toArray(new int[result.size()][]);
     }
 
     public static void main(String[] args) {
@@ -66,10 +68,10 @@ public class M056_Merging_Intervals {
         };
 
         // 调用核心算法函数
-//        int[][] result = merge(intervals);
+        int[][] result = merge(intervals);
 
         // 输出结果
-//        print(result);
+        print(result);
     }
 
     /**
