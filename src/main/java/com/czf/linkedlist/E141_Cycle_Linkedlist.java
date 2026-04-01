@@ -35,8 +35,35 @@ public class E141_Cycle_Linkedlist {
         head3.next = head1;
 
         boolean ans = hasCycle(head);
+        ListNode ans2 = detectCycle(head);
         System.out.println(ans);
+        System.out.println(ans2.val);
     }
+
+    public static ListNode detectCycle(ListNode head) {
+        ListNode fast = head;
+        ListNode slow = head;
+
+        while(fast != null && fast.next != null){
+            fast = fast.next.next;
+            slow = slow.next;
+            // 相遇,该链表一定含环
+            if(fast == slow){
+                // 快指针回到链表头
+                fast = head;
+                // 不断移动直到相遇
+                while(fast != slow){
+                    fast = fast.next;
+                    slow = slow.next;
+                }
+                // 再次相遇的点一定为入环点
+                return slow;
+            }
+        }
+
+        return null;
+    }
+
     public static boolean hasCycle(ListNode head) {
         ListNode fast = head;
         ListNode slow = head;
