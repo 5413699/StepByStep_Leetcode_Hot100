@@ -39,17 +39,8 @@ public class E206_Reverse_Linkedlist {
         // 2. 从第 m 个节点开始做局部反转（头插法）
         ListNode cur = pre.next;//2
         for (int i = 0; i < n - m && cur != null && cur.next != null; i++) {
-//            dummy -> 1 -> 2 -> 3 -> 4 -> 5
-//                  ↑    ↑    ↑
-//                 pre  cur  next
             ListNode next = cur.next;
- //            dummy -> 1 -> 2  3 -> 4 -> 5
-//                  ↑         ↑    ↑
-//                 pre      next  cur.next
             cur.next = next.next;
-//            dummy -> 1 -> 2  3 -> 4 -> 5
-//                          ↑    ↑
-//                      next  cur.next
             next.next = pre.next;
             pre.next = next;
         }
