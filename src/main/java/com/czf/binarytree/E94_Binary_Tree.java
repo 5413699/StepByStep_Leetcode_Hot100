@@ -71,4 +71,28 @@ public class E94_Binary_Tree {
     }
 
 
+    public static List<Integer> inorderTraversal2(TreeNode root) {
+
+        // 2.准备一个List存放结果
+        List ans = new ArrayList<Integer>();
+
+        return ans;
+
+    }
+    /**
+     * 先递归访问它的 左子树
+     * 再处理 当前节点 → 把 node.val 加入结果
+     * 再递归访问它的 右子树
+     */
+    public void inorder(TreeNode root, List<Integer> res) {
+        if (root == null) {
+            return;
+        }
+        inorder(root.left, res);
+        res.add(root.val);
+        inorder(root.right, res);
+    }
+
+
+
 }
