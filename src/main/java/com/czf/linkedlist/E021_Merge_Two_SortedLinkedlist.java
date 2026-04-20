@@ -40,7 +40,7 @@ public class E021_Merge_Two_SortedLinkedlist {
         ListNode list2 = new ListNode(1,
                 new ListNode(3,
                         new ListNode(4)));
-        ListNode ans = mergeTwoLists(list1, list2);
+        ListNode ans = mergeTwoLists2(list1, list2);
         System.out.println(ans);
     }
 
@@ -86,4 +86,33 @@ public class E021_Merge_Two_SortedLinkedlist {
         return dummy.next;
     }
 
+
+    /**
+     * 方法2，迭代法
+     */
+    public static ListNode mergeTwoLists2(ListNode list1, ListNode list2) {
+
+        // 当你比较两个队首的人时，如果发现 list1 的第一个值更小。
+        // 既然要升序，list1 的这个节点理所应当成为第一个
+        // 谁该排在 list1 这个人的后面呢？我们还不知道。
+        // 但我们知道剩下要排序的名单：list1 后面剩下的所有人（即 list1.next）以及 list2 里的所有人。
+        // 于是我们将list1 后面剩下的所有人看成一队，list2里的所有人看成一队继续比较，
+        // 他们排队的结果作为list的第二个人（list.next）
+        if(list1 == null){
+            return list2;
+        }else if(list2 == null){
+            return list1;
+        }
+
+        if(list1.val < list2.val){
+            list1.next = mergeTwoLists2(list1.next , list2);
+            return list1;
+        }else{
+            list2.next = mergeTwoLists2(list1 , list2.next);
+            return list2;
+        }
+
+
+
+    }
 }
