@@ -10,14 +10,13 @@ package com.czf.linkedlist;
  * @Version 1.0
  */
 public class E021_Merge_Two_SortedLinkedlist {
-    public static class ListNode {
+    private static class ListNode {
         int val;
         ListNode next;
         ListNode() {}
         ListNode(int val) { this.val = val; }
         ListNode(int val, ListNode next) { this.val = val; this.next = next; }
         @Override
-
         public String toString() {
             StringBuilder sb = new StringBuilder("[");
             ListNode cur = this;
