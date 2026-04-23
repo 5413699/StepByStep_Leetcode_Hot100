@@ -86,4 +86,28 @@ public class M024_Swap_Node_InPairs {
     }
 
 
+    public static ListNode swapPairs2(ListNode head) {
+        /**
+         递归方法
+         */
+
+        // 终止条件：如果head或者head.next为空(链表没有待处理节点，或者只有一个待处理节点)，无需交换，直接返回原值
+        if(head == null || head.next ==null){
+            return head;
+        }
+
+        // 递归逻辑，假如有两个节点1-2-3-4，处理后应该为2-1-3-4
+        // 节点2
+        ListNode swapNode = head.next;
+        // 交换后，1的next应该指向后续需要交换的节点群
+        head.next = swapPairs(swapNode.next);
+        // 交换后，2的next应该指向1
+        swapNode.next = head;
+
+        // 在递归函数中，return 的值代表的是这一层处理完后的“新头节点”。
+        // 这样上一层递归（如果有的话）才能正确地连接到它。
+        return swapNode;
+
+    }
+
 }
