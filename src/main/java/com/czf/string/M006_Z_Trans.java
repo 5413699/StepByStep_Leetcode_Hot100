@@ -1,0 +1,74 @@
+package com.czf.string;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * ClassName: test
+ * Package: com.czf.string
+ * Description:
+ *
+ * @Author 陈智飞
+ * @Create 2026/4/24 11:10
+ * @Version 1.0
+ */
+public class M006_Z_Trans {
+
+    public static void main(String[] args) {
+        String s = "PAYPALISHIRING";
+        int nUmRows = 3;
+        int col = s.length();
+        String ans = convert(s, nUmRows);
+        System.out.println(ans);
+    }
+
+    public static String convert(String s, int numRows) {
+        // 行索引
+        int rowIndex = 0;
+        // 移动方向
+        // 等于1时,代表向下移动，等于-1时，代表向上移动
+        int dir = 1;
+        // 记录每一行的字符串，将其拼接到一起即为最终答案
+        List<StringBuilder> rows = new ArrayList<StringBuilder>();
+        // 初始化每一行的字符串
+        for(int i = 0; i < Math.min(numRows, s.length());i++){
+            rows.add(new StringBuilder());
+        }
+        // 记录最终答案
+        StringBuilder ans = new StringBuilder();
+
+        //如果 numRows = 1（也就是只有一行）。
+        // 在这种情况下，rowIndex 会一直加 dir，
+        // 但它永远不会触发“调头”逻辑（因为 0 既是起点也是终点）。这可能会导致程序去访问不存在的行。
+        if(numRows == 1){
+            return s;
+        }
+
+
+        // 遍历字符串s，记录其z字形排列后每行的字符串
+        for(char c : s.toCharArray()){
+            // 将当前字母加入对应行的字符串
+            rows.get(rowIndex).append(c);
+            // 根据方向调整行索引
+            rowIndex += dir;
+            // 若到达首行或尾行调整方向
+            if(rowIndex == 0){
+                dir = 1;
+            }
+            if(rowIndex == numRows - 1){
+                dir = -1;
+            }
+        }
+
+        // 合并结果
+        for(StringBuilder row:rows){
+            ans.append(row);
+        }
+
+        return ans.toString();
+
+    }
+
+
+
+}
