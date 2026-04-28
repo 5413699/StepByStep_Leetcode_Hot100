@@ -69,6 +69,40 @@ public class M006_Z_Trans {
 
     }
 
+    public String convert2(String s, int numRows) {
+        // 行索引
+        int rowIndex = 0;
+        // 记录最终答案
+        StringBuilder ans = new StringBuilder();
 
+        // 通过找规律的方式填充字符串
+        // 用i代表z字形变换后的每一行
+        // 周期
+        int T = 2*(numRows - 1);
+
+
+        if(numRows ==1){
+            return s;
+        }
+
+        for(int i = 0; i < numRows; i++){
+            // j 代表的是每一个“周期”的起始下标
+            // j + i < s.length()确保当前行有元素
+            for(int j = 0; j + i < s.length(); j += T){
+                // 无论是否是首尾行，在第i行都存在索引为j+i的元素
+                ans.append(s.charAt(j + i));
+                // 如果不是首尾行，且当前周期内存在第二个字符。添加该字符
+                if(i != 0 && i != numRows - 1 && j + T - i < s.length()){
+                    ans.append(s.charAt(j + T - i));
+                }
+
+            }
+
+        }
+
+
+        return ans.toString();
+
+    }
 
 }
