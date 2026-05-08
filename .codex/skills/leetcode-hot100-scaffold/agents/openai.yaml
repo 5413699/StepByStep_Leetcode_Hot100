@@ -1,0 +1,4 @@
+interface:
+  display_name: "LeetCode Hot100 Scaffold"
+  short_description: "Create notes and Java skeleton files for this Hot100 project."
+  default_prompt: "Create the note and Java solution skeleton for the pasted LeetCode problem in this project."

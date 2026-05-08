@@ -1,0 +1,4 @@
+interface:
+  display_name: "LeetCode Interview Coach"
+  short_description: "Socratic Hot100 interview practice."
+  default_prompt: "Coach me through this LeetCode Hot100 problem using Socratic learning and interview-style explanation practice."
