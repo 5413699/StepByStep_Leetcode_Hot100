@@ -11,6 +11,7 @@ description: Create notes and Java solution skeletons for this LeetCode Hot100 J
    - Use `Get-ChildItem -Recurse -File` or `rg --files` when available.
    - Read nearby Java files in `src/main/java/com/czf/<category>` and nearby notes in `src/notes`.
    - Preserve the repository's existing naming style, package name, author block, and simple `ListNode`/`TreeNode` helper style.
+   - Use `@Author 陈智飞` for newly created Java skeletons.
 
 2. Infer placement from the problem.
    - Primary note path: the matching data-structure category under `src/notes`.
