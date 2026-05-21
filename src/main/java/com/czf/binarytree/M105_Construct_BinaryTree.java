@@ -2,8 +2,10 @@ package com.czf.binarytree;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
 /**
@@ -57,8 +59,35 @@ public class M105_Construct_BinaryTree {
     }
 
     // region LeetCode solution
+    private final Map<Integer, Integer> valueToIndex = new HashMap<>();
+
     public TreeNode buildTree(int[] preorder, int[] inorder) {
-        return null;
+        if (preorder == null || preorder.length == 0) {
+            return null;
+        }
+
+        valueToIndex.clear();
+        for (int i = 0; i < inorder.length; i++) {
+            valueToIndex.put(inorder[i], i);
+        }
+
+        return build(preorder, 0, preorder.length - 1, 0, inorder.length - 1);
+    }
+
+    private TreeNode build(int[] preorder, int preLeft, int preRight, int inLeft, int inRight) {
+        if (preLeft > preRight) {
+            return null;
+        }
+
+        int rootVal = preorder[preLeft];
+        TreeNode root = new TreeNode(rootVal);
+        int inRootIndex = valueToIndex.get(rootVal);
+        int leftSize = inRootIndex - inLeft;
+
+        root.left = build(preorder, preLeft + 1, preLeft + leftSize, inLeft, inRootIndex - 1);
+        root.right = build(preorder, preLeft + leftSize + 1, preRight, inRootIndex + 1, inRight);
+
+        return root;
     }
     // endregion
 
