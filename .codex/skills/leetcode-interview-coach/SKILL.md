@@ -1,6 +1,6 @@
 ---
 name: leetcode-interview-coach
-description: Guide LeetCode Hot100 and algorithm practice as an interview coach using Socratic questioning, tiered hints, dry runs, Java hand-coding practice, complexity analysis, and explanation drills. Use when the user wants to learn a problem, practice coding interviews, avoid being given the answer too early, improve algorithm thinking, or prepare to clearly explain solutions to an interviewer.
+description: Guide LeetCode Hot100 and algorithm practice as an interview coach using Socratic questioning, tiered hints, dry runs, Java hand-coding practice, complexity analysis, explanation drills, and post-practice repository updates. Use when the user wants to learn a problem, practice coding interviews, avoid being given the answer too early, improve algorithm thinking, insert their completed Java answer into this repo's scaffold file, or commit and push the finished problem branch.
 ---
 
 # LeetCode Interview Coach
@@ -91,6 +91,58 @@ When code is requested:
 - Name pointers and states clearly: `left`, `right`, `slow`, `fast`, `prev`, `cur`, `next`, `dummy`, `count`, `window`, `dp`.
 - Explain why each pointer moves or each state transition is valid.
 - After code, ask the user to identify one bug-prone line and explain it.
+
+## Repository Completion Workflow
+
+When the user reaches a correct answer or clearly says the solution is done, help finish the repository work instead of leaving the code only in chat.
+
+1. Confirm the solution is the user's final answer.
+   - Treat phrases like "一次运行成功", "这版通过了", "我明白了", or "帮我提交" as a signal to offer/perform repository completion.
+   - If the user is still exploring or asks only for hints, keep coaching and do not edit files.
+
+2. Locate the scaffold file created for the current problem.
+   - Prefer the current branch name and problem number/title.
+   - Search `src/main/java/com/czf` for the matching class or LeetCode method.
+   - Read the target file before editing. Do not create a parallel solution file unless the user asks.
+
+3. Insert the user's answer precisely.
+   - Preserve package, class name, helper node classes, `main`, and sample harness code.
+   - Replace only the region between `// region LeetCode solution` and `// endregion` when present.
+   - Prefer `.codex/skills/leetcode-hot100-scaffold/scripts/replace_solution_region.ps1` when markers are present.
+   - If markers are absent, replace only the matching LeetCode method body or the smallest necessary method/helper set after reading the file carefully.
+   - Keep the user's variable names and comments where they are clear; lightly fix imports, `static` mismatches, or compile errors needed to integrate with the scaffold.
+   - If the user has multiple versions, use the latest version they accepted as correct.
+
+4. Capture the user's thinking for the commit message.
+   - Summarize the problem title and the user's solution idea in Chinese.
+   - Use the exact local timestamp from `Get-Date -Format "yyyy-MM-dd HH:mm zzz"`.
+   - Include a Codex note in the commit body: `Codex 于 <timestamp> 提交`.
+   - Example shape:
+
+```text
+M114-二叉树展开为链表
+
+思路：原地遍历每个节点，将左子树接到右侧，并把原右子树挂到左子树最右节点之后。
+
+Codex 于 2026-05-21 21:34 +08:00 提交
+```
+
+5. Validate before commit.
+   - Run `mvn -q -DskipTests compile`.
+   - If the sample harness is runnable and low-risk, run the class or relevant command too.
+   - Fix compile errors caused by integration. If errors are unrelated to the current problem, report them and do not hide them.
+
+6. Commit and push only relevant files.
+   - Inspect `git status --short --branch`.
+   - Stage only the current problem's note/code files and any skill-approved helper changes directly related to the problem.
+   - Do not stage unrelated dirty files.
+   - Prefer `scripts/finish_problem.ps1` from the scaffold skill when available.
+   - Push to the current branch's upstream when configured; otherwise push to the repo's bound remote (`origin` unless the branch config says otherwise) with `git push -u <remote> HEAD`.
+   - If authentication or remote selection fails, stop with the exact command/output summary so the user can resolve it.
+
+7. Close with retention plus repository status.
+   - Include pattern name, core trick, common pitfall, complexity, committed files, branch, and push status.
+   - Keep the explanation concise and interview-ready.
 
 ## Mock Interview Mode
 
