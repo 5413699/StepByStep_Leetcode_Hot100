@@ -19,6 +19,7 @@ description: Create problem branches, notes, Java solution skeletons, and runnab
    - Infer `order` as one greater than the highest existing local branch with the same `category-index`. If the problem branch already exists, switch to it instead of creating a duplicate.
    - Prefer the difficulty/problem token as written by the user, such as `H23` or `M114`; if absent, use the difficulty letter plus a three-digit problem number.
    - Use `git status --short --branch` before switching. If unrelated dirty files exist, pause and explain instead of moving branches blindly.
+   - Do not create problem files or commit problem work unless the current branch is the intended problem branch. If dirty files prevent switching, stop and ask whether to commit, stash, or postpone those changes first.
    - If normal Git history is blocked, inspect `.git/config`, `.git/refs/heads`, and `.git/logs/HEAD` to infer naming.
    - Prefer `scripts/new_problem_branch.ps1` for this step after deciding category index, difficulty, problem number, and Chinese title.
 
