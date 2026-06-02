@@ -9,8 +9,9 @@ Use these rules to generate the tag plan consumed by SiYuan sync. This module is
   "problemTitle": "M200-岛屿数量",
   "tags": {
     "dataStructures": ["矩阵", "图论"],
-    "methods": ["DFS", "BFS", "连通块"],
-    "patterns": ["网格搜索", "Flood Fill"]
+    "methods": ["DFS"],
+    "patterns": ["网格搜索", "连通块", "Flood Fill"],
+    "readiness": ["提示后完成", "需要二刷"]
   },
   "tagEvidence": {
     "图论": "每个陆地格子可视为节点，上下左右相邻表示边"
@@ -19,7 +20,7 @@ Use these rules to generate the tag plan consumed by SiYuan sync. This module is
 }
 ```
 
-Only write tags with clear evidence. Put low-confidence tags in `suggestedTags`.
+Only write tags with clear evidence. Put low-confidence tags in `suggestedTags`. Do not tag both DFS and BFS unless both are taught, implemented, or explicitly discussed.
 
 ## Primary Data Structure
 
@@ -63,5 +64,13 @@ Each written tag needs one concrete reason:
 - From method signature.
 - From final code.
 - From the user's stated thinking.
+- From the observed coaching process for readiness tags.
 
-Do not tag both DFS and BFS unless both are taught, implemented, or explicitly discussed.
+## Readiness Tags
+
+- No initial idea: `一刷卡壳`
+- Solved after hints: `提示后完成`
+- Solved without hints: `独立完成`
+- Boundary or implementation bug: `代码有 bug`
+- Correct but verbose explanation: `面试表达不熟`
+- Important pattern or repeated confusion: `需要二刷`

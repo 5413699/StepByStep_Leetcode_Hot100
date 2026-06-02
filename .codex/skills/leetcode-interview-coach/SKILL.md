@@ -1,11 +1,11 @@
 ---
 name: leetcode-interview-coach
-description: One-stop LeetCode Hot100 Java workflow for this repository. Use when Codex needs to scaffold a new LeetCode problem branch and Java/note structure, coach the user through an algorithm interview problem with Socratic hints, review or polish the user's solution, insert the final Java answer into the scaffold, update project notes, commit and push the finished branch, or sync the completed problem into the user's SiYuan wiki with concept backlinks.
+description: LeetCode interview hand-coding training system for this repository. Use when Codex needs to scaffold a Java LeetCode problem, coach the user through algorithm thinking, review or polish the user's solution, insert the final answer, update repository notes, commit and push, assess interview readiness, plan reviews, or sync the completed learning record into the user's SiYuan interview-prep wiki with concept backlinks and audit logs.
 ---
 
 # LeetCode Interview Coach
 
-This is the only LeetCode Hot100 skill entrypoint for this repository. Route each request to the smallest independent module below. Load only the referenced file needed for the current task.
+This is the only LeetCode interview-training entrypoint for this repository. The goal is not only storing solutions; it is helping the user quickly become able to independently hand-code interview problems. Route each request to the smallest independent module below. Load only the referenced file needed for the current task.
 
 ## Module Routing
 
@@ -17,23 +17,47 @@ This is the only LeetCode Hot100 skill entrypoint for this repository. Route eac
   - Triggers: "教我", "讲讲", "没思路", "帮我看代码", "模拟面试".
   - Output: questions, tiered hints, code review, dry run, complexity, interview wording.
 
+- **Assess interview readiness**: read `references/interview-readiness-flow.md`.
+  - Triggers: "掌握了吗", "面试怎么说", "复习建议", "我卡在哪里", finish flow after coaching.
+  - Output: readiness status, weak points, interview expression quality, next review actions.
+
 - **Finish a completed solution**: read `references/finish-flow.md`.
   - Triggers: "最终答案", "帮我整理", "帮我提交", "收尾", "这版通过了", "一次运行成功".
-  - Output: integrated Java answer, updated project note, Maven compile, Git commit, push, optional SiYuan sync.
+  - Output: integrated Java answer, updated project note, readiness assessment, Maven compile, Git commit, push, optional SiYuan sync.
 
 - **Sync to SiYuan wiki**: read `references/siyuan-api-flow.md`.
   - Triggers: "同步思源", "生成 wiki 笔记", or finish flow with SiYuan enabled.
-  - Output: problem page link, touched concept page links, sync status.
+  - Output: problem page link, touched concept/review page links, audit log link, sync status.
+
+- **Apply SiYuan wiki policy**: read `references/siyuan-wiki-policy.md`.
+  - Use when deciding where a problem, concept, review status, or audit log should be written in the user's existing SiYuan system.
+  - Output: target HPaths, page templates, update rules, dedupe rules.
+
+- **Validate SiYuan sync**: read `references/siyuan-sync-validation.md`.
+  - Use after any SiYuan write.
+  - Output: exported-content checks for Chinese integrity, missing sections, duplicate links, and visible machine markers.
+
+- **Plan review schedule**: read `references/review-schedule-flow.md`.
+  - Triggers: "二刷", "复习", "下次什么时候看", finish flow after readiness assessment.
+  - Output: review labels and suggested follow-up actions.
 
 - **Generate tags**: read `references/tag-rules.md`.
   - Use before SiYuan sync or whenever the user asks what data structure/method/pattern a problem belongs to.
 
+- **Migrate legacy SiYuan notes**: use the separate `leetcode-siyuan-migrator` skill.
+  - Triggers: "迁移旧笔记", "整理已有思源体系", "把旧分类迁到新系统".
+  - This main skill must not perform batch migration during normal finish flow.
+
 ## Global Rules
 
 - Prefer Chinese responses in this repository.
-- Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make SiYuan sync depend on Git. Use finish flow only as the orchestrator.
+- Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make low-level SiYuan API code depend on LeetCode note policy. Use finish flow only as the orchestrator.
 - Do not call or depend on the removed scaffold skill. Its scripts have been migrated into this skill.
 - Never edit SiYuan `.sy` files directly. Use official HTTP APIs only.
+- Never write Chinese or emoji-rich SiYuan page bodies through ad hoc PowerShell string concatenation. Use the UTF-8 Python API layer and ASCII temp file paths.
+- SiYuan user-visible pages must not contain `<!-- codex-* -->` markers. Those markers may remain in repository Markdown only.
+- The new SiYuan target structure is authoritative: `算法题/面试手撕训练系统`. Legacy pages may be migrated into it, but new writes must not create new knowledge pages under the old `按数据结构分类` / `按方法分类` layout.
+- One-time migration from legacy SiYuan pages is handled by `leetcode-siyuan-migrator`, dry-run first and non-destructive by default.
 - Before editing repository files, inspect the target files and current `git status --short --branch`.
 - Preserve unrelated user changes. Stage only files explicitly relevant to the current problem or skill iteration.
 
@@ -43,11 +67,12 @@ When the user reaches a final answer:
 
 1. Locate the current problem's Java scaffold and note.
 2. Replace only the marked LeetCode solution region.
-3. Update only the intended note region.
-4. Generate a tag plan with evidence when SiYuan sync is enabled.
-5. Run `mvn -q -DskipTests compile`.
-6. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
-7. Sync to SiYuan if configured; report failure without rolling back Git.
+3. Update only the intended repository note region.
+4. Generate a tag plan with evidence.
+5. Generate an interview-readiness assessment and review labels.
+6. Run `mvn -q -DskipTests compile`.
+7. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
+8. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate exported content, and report failure without rolling back Git.
 
 ## User-Facing Closeout
 
@@ -59,6 +84,7 @@ After finishing work, report:
 - changed files
 - Maven compile status
 - SiYuan problem page link and concept page links when synced
+- readiness status and next review actions when available
 - any skipped or failed step
 
 Keep the final response concise.

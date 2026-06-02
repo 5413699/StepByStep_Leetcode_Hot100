@@ -1,4 +1,4 @@
 interface:
-  display_name: "LeetCode Hot100 Workflow"
-  short_description: "Scaffold, coach, finish, commit, push, and sync Hot100 notes."
-  default_prompt: "Handle this LeetCode Hot100 task in the Java project: scaffold the problem if needed, coach me through it, then integrate my final answer, commit/push, and sync the completed note to SiYuan."
+  display_name: "LeetCode Interview Coach"
+  short_description: "Train interview hand-coding, finish Java answers, and sync readiness notes."
+  default_prompt: "Handle this LeetCode interview task in the Java project: scaffold if needed, coach me through the reasoning, integrate my final answer, assess interview readiness, commit/push, and sync the learning record to SiYuan."

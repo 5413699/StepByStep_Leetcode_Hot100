@@ -1,6 +1,6 @@
 # Finish Flow
 
-Use this flow when the user has a final answer and wants repository completion. This module composes scaffold helpers and optional SiYuan sync; keep the substeps independently callable.
+Use this flow when the user has a final answer and wants repository completion. This module composes scaffold helpers, interview readiness assessment, Git completion, and optional SiYuan sync; keep the substeps independently callable.
 
 ## Required Inputs
 
@@ -9,7 +9,8 @@ Use this flow when the user has a final answer and wants repository completion. 
 - Problem title.
 - User's final Java solution.
 - User's thinking and complexity.
-- Optional tag plan JSON for SiYuan.
+- Optional tag plan JSON.
+- Optional readiness JSON.
 - Optional SiYuan sync payload JSON.
 
 ## Workflow
@@ -18,10 +19,11 @@ Use this flow when the user has a final answer and wants repository completion. 
 2. Read the target Java file before editing.
 3. Replace only the marked `// region LeetCode solution` region using `scripts/replace_solution_region.ps1`.
 4. Update only the Codex-marked area in the project Markdown note when a note update is needed.
-5. Generate a tag plan using `tag-rules.md` if SiYuan sync is enabled.
-6. Run `mvn -q -DskipTests compile`.
-7. Stage only current problem files.
-8. Commit with:
+5. Generate a tag plan using `tag-rules.md`.
+6. Generate readiness assessment using `interview-readiness-flow.md`.
+7. Run `mvn -q -DskipTests compile`.
+8. Stage only current problem files.
+9. Commit with:
 
 ```text
 <problem title>
@@ -31,8 +33,9 @@ Use this flow when the user has a final answer and wants repository completion. 
 Codex 于 <yyyy-MM-dd HH:mm zzz> 提交
 ```
 
-9. Push current branch.
-10. If SiYuan is enabled, call `scripts/sync_leetcode_to_siyuan.py`.
+10. Push current branch.
+11. If SiYuan is enabled, call `scripts/sync_leetcode_to_siyuan.py`.
+12. Validate exported SiYuan pages using `siyuan-sync-validation.md`.
 
 ## Script Interfaces
 
@@ -62,7 +65,8 @@ powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\
   -ProblemTitle "<problem title>" `
   -Thinking "<summary>" `
   -SolutionContent $solution `
-  -TagPlanJson "<tag plan json>"
+  -TagPlanJson "<tag plan json>" `
+  -ReadinessJson "<readiness json>"
 ```
 
 ## Failure Policy
@@ -70,3 +74,4 @@ powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\
 - If Maven compile fails, stop before Git and SiYuan sync.
 - If unrelated dirty files exist, stop before commit.
 - If Git succeeds but SiYuan fails, do not roll back Git; report the SiYuan error.
+- If SiYuan validation fails, keep outgoing payload files and report the failing block id.

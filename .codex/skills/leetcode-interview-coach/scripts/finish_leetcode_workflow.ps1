@@ -18,6 +18,7 @@ param(
     [string]$ComplexityMarkdown,
     [string[]]$Pitfalls = @(),
     [string]$TagPlanJson,
+    [string]$ReadinessJson,
     [string]$SyncInputJson,
     [string]$WorkflowConfigPath,
     [switch]$SkipSiyuan,
@@ -105,6 +106,7 @@ if (-not $SkipSiyuan) {
             pitfalls = $Pitfalls
             tags = $(if ($tagPlan -and $tagPlan.tags) { $tagPlan.tags } else { @{} })
             tagEvidence = $(if ($tagPlan -and $tagPlan.tagEvidence) { $tagPlan.tagEvidence } else { @{} })
+            readiness = $(if ($ReadinessJson) { Get-Content -LiteralPath $ReadinessJson -Raw -Encoding UTF8 | ConvertFrom-Json } else { @{} })
             git = @{
                 branch = $branch
                 commit = $commit

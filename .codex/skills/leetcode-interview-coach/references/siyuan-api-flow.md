@@ -4,7 +4,7 @@ Use this flow only for syncing completed LeetCode notes into SiYuan. This module
 
 ## Official API Contract
 
-- Endpoint default: `http://127.0.0.1:6806`
+- Endpoint default candidate: `http://127.0.0.1:6806`
 - Method: POST
 - Body: JSON
 - Header: `Authorization: Token <token>`
@@ -34,50 +34,49 @@ Local config path:
 C:\Users\ADMIN\.codex\leetcode-hot100-workflow.local.json
 ```
 
-Token should come from `SIYUAN_TOKEN` by default:
+Token should come from `SIYUAN_TOKEN` by default. The actual URL may be auto-detected and written back to config:
 
 ```json
 {
   "siyuan": {
     "enabled": true,
     "url": "http://127.0.0.1:6806",
+    "urlAutoDetect": true,
+    "lastWorkingUrl": "",
     "workspacePath": "F:\\就业资料-陈智飞\\SiYuan_czf",
     "tokenSource": "env:SIYUAN_TOKEN",
     "notebookId": "",
-    "problemRootHPath": "/算法/LeetCode Hot100/题集",
-    "conceptRootHPath": "/算法/LeetCode Hot100/知识点",
-    "indexHPath": "/算法/LeetCode Hot100 Wiki",
     "autoCreateConceptPage": true,
     "autoUpdateConceptIndex": true,
     "pushNotification": true
+  },
+  "wikiPolicy": {
+    "systemRootHPath": "/算法题/面试手撕训练系统"
   }
 }
 ```
 
 If config is missing, run `scripts/configure_workflow.py`.
 
+## URL Detection
+
+Before sync:
+
+1. Try `lastWorkingUrl`.
+2. Try configured `url`.
+3. Try `http://127.0.0.1:6806`.
+4. If all fail, inspect local listening ports for `SiYuan-Kernel.exe`.
+5. Probe candidates with `/api/system/version`.
+6. Write the successful URL back to `lastWorkingUrl`.
+
+Do not print the token.
+
 ## Sync Semantics
 
-- Problem HPath: `{problemRootHPath}/{problemTitle}`
-- Concept HPath: `{conceptRootHPath}/{conceptName}`
+- Problem HPath: `{systemRootHPath}/题集/{problemTitle}`
+- Concept HPaths are defined by `references/siyuan-wiki-policy.md`.
 - Use `getIDsByHPath` to dedupe.
 - Use `createDocWithMd` only for missing documents.
-- Use fixed regions to avoid overwriting user content:
+- Do not expose `<!-- codex-* -->` markers in SiYuan pages.
 
-```markdown
-<!-- codex-leetcode-start -->
-...
-<!-- codex-leetcode-end -->
-```
-
-Concept index region:
-
-```markdown
-## 题集
-
-<!-- codex-leetcode-index-start -->
-((problemId "Problem Title"))
-<!-- codex-leetcode-index-end -->
-```
-
-After sync, return `siyuan://blocks/<id>` links for the problem and touched concepts.
+After sync, validate exported content and return `siyuan://blocks/<id>` links for the problem and touched pages.
