@@ -22,21 +22,30 @@ Migration is high-risk and low-frequency. Always dry-run first. Never delete or 
    - `/算法题/常用函数`
 4. Build a migration plan into:
    - `/算法题/面试手撕训练系统/题集`
-   - `/算法题/面试手撕训练系统/知识点`
+   - `/算法题/面试手撕训练系统/知识点/数据结构`
+   - `/算法题/面试手撕训练系统/知识点/解题方法`
+   - `/算法题/面试手撕训练系统/知识点/解题模式`
+   - `/算法题/面试手撕训练系统/知识点/常用函数`
    - `/算法题/面试手撕训练系统/错题与复习`
+   - `/算法题/面试手撕训练系统/面试表达`
    - `/算法题/面试手撕训练系统/Codex 同步日志`
-5. Show dry-run output first.
-6. Apply only with an explicit `--apply`.
-7. Validate exported pages for Chinese integrity and duplicate links.
+5. Run `scripts/migrate_siyuan_interview_system.py` without `--apply` first and save `--output` to an ASCII temp path.
+6. Inspect dry-run `summary`, `items`, `conflicts`, and `cleanupAdvice`.
+7. Apply only with an explicit `--apply`.
+8. Validate exported pages for Chinese integrity, replacement characters, visible machine markers, and source ids.
 
 ## Output
 
 Report:
 
 - source roots scanned
-- pages to create
-- pages to update
-- pages skipped
+- pages created or updated
 - conflicts requiring user review
+- `cleanupAdvice.safeAfterTargetVerification`
+- `cleanupAdvice.reviewBeforeDelete`
+- validation summary
+- report JSON path
+- API URL used, never token
 - audit log link when applied
 
+Never say an old page is safe to delete without the condition: first verify that the target page contains the expected migrated content. Directory/index pages and `未命名` pages require manual review.

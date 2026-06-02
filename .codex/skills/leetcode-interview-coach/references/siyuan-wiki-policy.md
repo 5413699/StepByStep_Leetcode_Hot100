@@ -13,6 +13,7 @@ All new LeetCode interview-training writes go under:
     /数据结构
     /解题方法
     /解题模式
+    /常用函数
   /错题与复习
   /面试表达
   /Codex 同步日志
@@ -52,6 +53,7 @@ Concept HPaths:
 - Data structures: `{systemRootHPath}/知识点/数据结构/{name}`
 - Methods: `{systemRootHPath}/知识点/解题方法/{name}`
 - Patterns: `{systemRootHPath}/知识点/解题模式/{name}`
+- Common functions: `{systemRootHPath}/知识点/常用函数/{name}`
 
 When creating a concept page, include:
 
@@ -102,4 +104,3 @@ Append one entry per sync with:
 - touched problem/concept/review pages
 - validation status
 - skipped or failed steps
-

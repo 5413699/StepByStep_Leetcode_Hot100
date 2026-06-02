@@ -1,4 +1,4 @@
 interface:
   display_name: "LeetCode SiYuan Migrator"
-  short_description: "Dry-run and apply one-time SiYuan migration into the interview-training wiki."
-  default_prompt: "Audit my existing SiYuan LeetCode notes and prepare a dry-run migration plan into the new 面试手撕训练系统 structure."
+  short_description: "Dry-run, apply, validate, and report cleanup candidates for SiYuan LeetCode note migration."
+  default_prompt: "Audit my existing SiYuan LeetCode notes, prepare a dry-run migration plan into the new 面试手撕训练系统 structure, and report which old pages require review before cleanup."

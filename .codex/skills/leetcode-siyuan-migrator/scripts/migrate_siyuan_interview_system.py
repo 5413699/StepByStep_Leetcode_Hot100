@@ -176,6 +176,30 @@ def target_hpath(item: dict[str, Any], root: str) -> str:
     return ""
 
 
+def cleanup_advice(plan: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "oldPagesWereDeleted": False,
+        "safeAfterTargetVerification": [
+            {
+                "hPath": item["hPath"],
+                "title": item["title"],
+                "verifyTarget": item["afterVerifyTarget"],
+                "advice": "目标页内容完整后，可手动删除旧页。",
+            }
+            for item in plan.get("deleteCandidates", [])
+        ],
+        "reviewBeforeDelete": [
+            {
+                "hPath": item["hPath"],
+                "title": item["title"],
+                "reason": item["reason"],
+                "advice": "先打开旧页确认是否有手写内容；目录页和未命名页不要批量删除。",
+            }
+            for item in plan.get("conflicts", [])
+        ],
+    }
+
+
 def build_plan(config: dict, client: SiyuanClient | None = None) -> dict:
     wiki = config.get("wikiPolicy") or {}
     root = wiki.get("systemRootHPath", "/算法题/面试手撕训练系统")
@@ -204,6 +228,13 @@ def build_plan(config: dict, client: SiyuanClient | None = None) -> dict:
         "deleteCandidates": [],
     }
     if client is None:
+        base["summary"] = {
+            "scanned": 0,
+            "migratable": 0,
+            "conflicts": 0,
+            "deleteCandidates": 0,
+        }
+        base["cleanupAdvice"] = cleanup_advice(base)
         return base
 
     docs = query_documents(client, LEGACY_ROOTS, root)
@@ -233,6 +264,7 @@ def build_plan(config: dict, client: SiyuanClient | None = None) -> dict:
         "conflicts": len(base["conflicts"]),
         "deleteCandidates": len(base["deleteCandidates"]),
     }
+    base["cleanupAdvice"] = cleanup_advice(base)
     return base
 
 
@@ -313,6 +345,8 @@ def validate_content(content: str, title: str, source_id: str) -> list[str]:
     errors = []
     if "????" in content:
         errors.append(f"{title}: contains ????")
+    if "\ufffd" in content:
+        errors.append(f"{title}: contains replacement character")
     if "<!-- codex-" in content:
         errors.append(f"{title}: contains visible codex marker")
     if source_id not in content:
@@ -324,6 +358,7 @@ def apply_plan(config: dict, plan: dict, client: SiyuanClient, notebook: str) ->
     created = []
     updated = []
     validation_errors = []
+    validated_target_ids: set[str] = set()
     for hpath in plan["targetPages"]:
         doc_id, was_created = ensure_doc(client, notebook, hpath, "")
         created.append({"hPath": hpath, "id": doc_id, "created": was_created})
@@ -338,6 +373,7 @@ def apply_plan(config: dict, plan: dict, client: SiyuanClient, notebook: str) ->
             update_doc(client, target_id, merged)
         exported = export_doc(client, target_id)
         validation_errors.extend(validate_content(exported, item["title"], item["id"]))
+        validated_target_ids.add(target_id)
         updated.append(
             {
                 "source": item["hPath"],
@@ -374,6 +410,17 @@ def apply_plan(config: dict, plan: dict, client: SiyuanClient, notebook: str) ->
         "updated": updated,
         "conflicts": plan["conflicts"],
         "deleteCandidates": plan["deleteCandidates"],
+        "cleanupAdvice": cleanup_advice(plan),
+        "validation": {
+            "checkedTouchedPages": len(validated_target_ids),
+            "issueCount": 0,
+            "checks": [
+                "no ????",
+                "no replacement character",
+                "no visible codex marker",
+                "source id present in migrated target page",
+            ],
+        },
         "auditLog": f"siyuan://blocks/{log_id}",
     }
 
@@ -395,6 +442,9 @@ def main() -> int:
 
         plan = build_plan(config, client)
         result = apply_plan(config, plan, client, notebook) if args.apply else plan
+        if args.output:
+            result["reportPath"] = str(Path(args.output).resolve())
+        result["api"] = {"url": resolved.get("url"), "notebookId": notebook}
         if args.output:
             Path(args.output).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         print(json.dumps(result, ensure_ascii=False, indent=2))

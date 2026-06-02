@@ -8,6 +8,7 @@ Export every touched page through `/api/export/exportMdContent` and verify:
 
 - Chinese text is readable.
 - Content does not contain `????`.
+- Content does not contain the Unicode replacement character `U+FFFD`.
 - Content does not contain visible `<!-- codex-`.
 - Problem page contains the problem title, thinking, solution code, complexity, readiness status, and commit hash.
 - Concept and review pages contain exactly one visible problem link for the current problem.
@@ -28,4 +29,3 @@ json.dumps(payload, ensure_ascii=False).encode("utf-8")
 ```
 
 PowerShell may launch scripts and pass ASCII paths, but it must not construct Chinese page bodies.
-

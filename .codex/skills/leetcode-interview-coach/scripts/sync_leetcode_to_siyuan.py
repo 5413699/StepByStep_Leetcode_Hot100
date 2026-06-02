@@ -269,6 +269,8 @@ def validate_page(content: str, required: list[str], title: str) -> list[str]:
     errors: list[str] = []
     if "????" in content:
         errors.append(f"{title}: contains ????")
+    if "\ufffd" in content:
+        errors.append(f"{title}: contains replacement character")
     if "<!-- codex-" in content:
         errors.append(f"{title}: contains visible codex marker")
     for item in required:
