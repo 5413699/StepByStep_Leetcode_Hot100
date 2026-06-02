@@ -1,4 +1,4 @@
 interface:
-  display_name: "LeetCode Interview Coach"
-  short_description: "Socratic Hot100 practice plus repo completion."
-  default_prompt: "Coach me through this LeetCode Hot100 problem, help me explain it for interviews, then insert my final Java answer into the scaffold file and commit/push it when done."
+  display_name: "LeetCode Hot100 Workflow"
+  short_description: "Scaffold, coach, finish, commit, push, and sync Hot100 notes."
+  default_prompt: "Handle this LeetCode Hot100 task in the Java project: scaffold the problem if needed, coach me through it, then integrate my final answer, commit/push, and sync the completed note to SiYuan."

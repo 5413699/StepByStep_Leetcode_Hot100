@@ -1,4 +1,0 @@
-interface:
-  display_name: "LeetCode Hot100 Scaffold"
-  short_description: "Create branches, notes, Java skeletons, and sample harnesses."
-  default_prompt: "Create the branch, note, Java solution skeleton, and runnable sample harness for the pasted LeetCode problem in this project."
