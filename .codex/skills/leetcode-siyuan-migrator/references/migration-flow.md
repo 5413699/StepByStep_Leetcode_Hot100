@@ -11,6 +11,7 @@ This migration moves legacy SiYuan algorithm notes into the new interview-traini
     /数据结构
     /解题方法
     /解题模式
+    /常用函数
   /错题与复习
   /面试表达
   /Codex 同步日志
@@ -24,6 +25,9 @@ This migration moves legacy SiYuan algorithm notes into the new interview-traini
 - Use UTF-8 Python API only.
 - If a target page already exists, merge missing links and leave user-written content intact.
 - If source content cannot be classified confidently, list it as a conflict instead of guessing.
+- Legacy `/算法题/LeetCode Hot100/知识点/*` pages are migrated only when the title matches an explicit category whitelist. Unknown knowledge titles stay in conflicts for human review.
+- Pages titled `未命名` or `Untitled` are always conflicts, even when they live under a known legacy category.
+- After migration, report delete candidates only. Never delete automatically.
 
 ## Apply Criteria
 
@@ -34,4 +38,3 @@ Only apply when:
 - The target notebook is configured.
 - Dry-run shows no destructive operations.
 - User explicitly requested apply.
-
