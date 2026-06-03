@@ -87,6 +87,7 @@ Category pages are:
 
 Each category page should contain `## 知识点` and visible block references to child concept pages. If a category has child concepts, the page must not be empty.
 Show associated problem counts when available.
+When a completed problem links to a concept, the parent category page must be updated in the same sync. For example, a problem tagged `图论` must update both `{systemRootHPath}/知识点/数据结构/图论` and `{systemRootHPath}/知识点/数据结构`.
 
 ## Home Pages
 
@@ -103,7 +104,7 @@ The root home page should contain entry links, training overview, high-frequency
 The section home pages should not be blank:
 
 - `题集`: problem links grouped or appended by solved problem.
-- `知识点`: category entrances plus recently linked concepts.
+- `知识点`: category entrances plus recently linked concepts. It must include every category and concept touched by the current sync.
 - `错题与复习`: only real review entries. Do not show all possible labels when they have no linked problems.
 - `面试表达`: reusable interview explanation templates and recent expression-practice problems.
 

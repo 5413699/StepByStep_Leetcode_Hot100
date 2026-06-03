@@ -37,6 +37,10 @@ This is the only LeetCode interview-training entrypoint for this repository. The
   - Use when deciding where a problem, concept, review status, or audit log should be written in the user's existing SiYuan system.
   - Output: target HPaths, page templates, update rules, dedupe rules.
 
+- **Update SiYuan linked indexes**: read `references/siyuan-linked-index-flow.md`.
+  - Use inside SiYuan sync after tags are finalized.
+  - Output: problem index, concept pages, category pages, knowledge home, root home, review home, and expression home are mutually linked and validated.
+
 - **Validate SiYuan sync**: read `references/siyuan-sync-validation.md`.
   - Use after any SiYuan write.
   - Output: exported-content checks for Chinese integrity, missing sections, duplicate links, and visible machine markers.
@@ -79,7 +83,7 @@ When the user reaches a final answer:
 6. Generate an interview-readiness assessment and review labels.
 7. Run `mvn -q -DskipTests compile`.
 8. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
-9. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate exported content, and report failure without rolling back Git.
+9. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate current-block Markdown, and report failure without rolling back Git.
 
 ## User-Facing Closeout
 

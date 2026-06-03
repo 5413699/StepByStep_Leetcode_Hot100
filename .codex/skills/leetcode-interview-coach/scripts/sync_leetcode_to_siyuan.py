@@ -15,7 +15,6 @@ from siyuan_client import (
     DEFAULT_CONFIG,
     SiyuanError,
     ensure_doc,
-    export_doc,
     get_block_kramdown,
     load_config,
     load_json,
@@ -98,6 +97,11 @@ CONCEPT_INTROS = {
         "intro": "BFS 是按层向外扩展的遍历方法，常用于最短步数、层序遍历和状态扩散问题。",
         "signals": ["题目要求最短路径或最少步数", "需要按层处理", "可以用队列扩展状态"],
         "pitfalls": ["入队时不标记导致重复入队", "层数计数位置错误", "队列为空时仍 poll"],
+    },
+    "多源 BFS": {
+        "intro": "多源 BFS 是把多个初始状态同时加入队列，从这些起点同步按层向外扩散，常用于最短时间、状态传播和多起点最短距离问题。",
+        "signals": ["题目存在多个初始起点", "每一轮所有起点同时扩散", "要求最少分钟数、最短距离或最早到达时间"],
+        "pitfalls": ["只从一个起点开始导致答案偏大", "没有固定当前层 size，导致同一轮和下一轮混在一起", "新增状态入队前没有立即标记，导致重复入队"],
     },
     "动态规划": {
         "intro": "动态规划通过定义状态和状态转移，复用子问题结果解决最优值、计数和可行性问题。",
@@ -353,20 +357,34 @@ def problem_ref(problem_id: str, title: str) -> str:
 
 
 def append_unique_under_heading(markdown: str, heading: str, line: str, *dedupe_keys: str) -> str:
-    if any(key and key in markdown for key in dedupe_keys) or line in markdown:
-        return markdown
+    primary_key = dedupe_keys[0] if dedupe_keys else ""
+    secondary_keys = [key for key in dedupe_keys[1:] if key]
     entry = line if line.startswith("- ") else f"- {line}"
     pattern = re.compile(rf"(?ms)(^##\s*{re.escape(heading)}\s*\n)(.*?)(?=^##\s+|\Z)")
     match = pattern.search(markdown)
     if not match:
+        if line in markdown or (primary_key and primary_key in markdown):
+            return f"## {heading}\n\n{markdown.strip()}\n"
         return markdown.rstrip() + f"\n\n## {heading}\n\n{entry}\n"
     body = match.group(2).rstrip()
+    if line in body or (primary_key and primary_key in body):
+        return markdown
+    for key in secondary_keys:
+        if key not in body:
+            continue
+        lines = body.splitlines()
+        for index, existing_line in enumerate(lines):
+            if key in existing_line and (not primary_key or primary_key not in existing_line):
+                lines[index] = entry
+                replacement = match.group(1) + "\n".join(lines).rstrip() + "\n"
+                return markdown[: match.start()] + replacement + markdown[match.end() :]
     replacement = match.group(1) + (body + "\n" if body else "\n") + entry + "\n"
     return markdown[: match.start()] + replacement + markdown[match.end() :]
 
 
 def strip_block_markdown(markdown: str) -> str:
     text = re.sub(r"(?ms)(?:\A|\n)---\s*\n.*?\n---\s*(?=\n|\Z)", "\n", markdown.strip())
+    text = re.sub(r"(?m)^(title|date|lastmod):\s*.*$", "", text)
     text = re.sub(r"\{:\s+[^}]*\}", "", text)
     text = re.sub(r"(?m)^#\s+.+$", "", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -375,6 +393,26 @@ def strip_block_markdown(markdown: str) -> str:
 
 def own_doc_markdown(client: Any, doc_id: str) -> str:
     return strip_block_markdown(get_block_kramdown(client, doc_id))
+
+
+def clean_linked_page_markdown(markdown: str) -> str:
+    has_export_pollution = bool(
+        re.search(r"(?m)^(title|date|lastmod):\s*", markdown)
+        or re.search(r"\[\^\d+\]", markdown)
+        or re.search(r"(?ms)(?:^|\n)\[\^\d+\]:\s*#\s+", markdown)
+    )
+    text = re.sub(r"(?m)^(title|date|lastmod):\s*.*$", "", markdown)
+    text = re.sub(r"(?ms)(?:^|\n)\[\^\d+\]:\s*#\s+.*?(?=\n##\s+|\Z)", "\n", text)
+    text = re.sub(r"\[\^\d+\]", "", text)
+    if has_export_pollution:
+        first_problem_heading = re.search(
+            r"(?m)^##\s+(知识链接|题干|第一反应|卡壳点|关键突破|思考过程|面试版思路|最终题解|复杂度|易错点|面试表达|掌握状态|复习建议|同步记录)\s*$",
+            text,
+        )
+        if first_problem_heading:
+            text = text[: first_problem_heading.start()].rstrip() + "\n"
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def retain_recent_audit_entries(markdown: str, now: datetime) -> str:
@@ -424,6 +462,7 @@ def concept_markdown(name: str, category: str, problem_id: str, title: str) -> s
     templates = {
         "DFS": ["private void dfs(...) {", "    if (越界或状态非法) return;", "    标记当前状态;", "    dfs(下一个状态);", "}"],
         "BFS": ["Queue<Node> queue = new LinkedList<>();", "while (!queue.isEmpty()) {", "    int size = queue.size();", "    // 处理当前层", "}"],
+        "多源 BFS": ["Queue<int[]> queue = new LinkedList<>();", "// 所有初始源点同时入队", "while (!queue.isEmpty()) {", "    int size = queue.size();", "    // 当前层代表同一轮扩散", "}"],
         "Flood Fill": ["if (越界 || grid[i][j] != 目标状态) return;", "grid[i][j] = 已访问状态;", "dfs(i + 1, j);"],
         "网格搜索": ["int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};", "for (int[] d : dirs) { ... }"],
         "连通块": ["if (发现未访问节点) {", "    count++;", "    dfs/bfs 标记整个连通块;", "}"],
@@ -504,7 +543,7 @@ def update_homepages(
         section_ids[name] = sid
     root_id, _ = ensure_doc(client, notebook, normalize_hpath(root), "")
 
-    root_md = own_doc_markdown(client, root_id)
+    root_md = clean_linked_page_markdown(own_doc_markdown(client, root_id))
     if not root_md:
         root_md = "\n".join(
             [
@@ -521,13 +560,13 @@ def update_homepages(
     root_md = append_unique_under_heading(root_md, "最近同步", f"- {problem_ref(problem_id, title)}：{datetime.now().strftime('%Y-%m-%d %H:%M')} 同步", problem_id, title)
     update_doc(client, root_id, root_md)
 
-    problem_index = own_doc_markdown(client, section_ids["题集"])
+    problem_index = clean_linked_page_markdown(own_doc_markdown(client, section_ids["题集"]))
     if not problem_index:
         problem_index = "## 题目列表\n\n这里按题号汇总已完成整理的题目页。"
     problem_index = append_unique_under_heading(problem_index, "题目列表", f"- {problem_ref(problem_id, title)}", problem_id, title)
     update_doc(client, section_ids["题集"], problem_index)
 
-    knowledge_home = own_doc_markdown(client, section_ids["知识点"])
+    knowledge_home = clean_linked_page_markdown(own_doc_markdown(client, section_ids["知识点"]))
     if not knowledge_home:
         lines = ["## 分类入口", ""]
         for category in CATEGORY_ORDER:
@@ -537,12 +576,20 @@ def update_homepages(
             else:
                 lines.append(f"- {category}：{CATEGORY_DESCRIPTIONS[category]}")
         knowledge_home = "\n".join(lines)
+    knowledge_home = ensure_heading(knowledge_home, "分类入口")
+    for category in CATEGORY_ORDER:
+        category_item = category_results.get(category)
+        if category_item:
+            line = f"- {page_link(category_item['id'], category)}：{CATEGORY_DESCRIPTIONS[category]}"
+            knowledge_home = append_unique_under_heading(knowledge_home, "分类入口", line, category_item["id"], category)
+        else:
+            knowledge_home = append_unique_under_heading(knowledge_home, "分类入口", f"- {category}：{CATEGORY_DESCRIPTIONS[category]}", "", category)
     knowledge_home = ensure_heading(knowledge_home, "最近关联知识点")
     for item in concept_results:
         knowledge_home = append_unique_under_heading(knowledge_home, "最近关联知识点", f"- {page_link(item['id'], item['name'])}：来自 {problem_ref(problem_id, title)}", item["id"], item["name"])
     update_doc(client, section_ids["知识点"], knowledge_home)
 
-    review_home = own_doc_markdown(client, section_ids["错题与复习"])
+    review_home = clean_linked_page_markdown(own_doc_markdown(client, section_ids["错题与复习"]))
     if not review_home:
         review_home = "\n".join(
             [
@@ -563,7 +610,7 @@ def update_homepages(
             review_home = append_unique_under_heading(review_home, "最近归档", line, line)
     update_doc(client, section_ids["错题与复习"], review_home)
 
-    expression_home = own_doc_markdown(client, section_ids["面试表达"])
+    expression_home = clean_linked_page_markdown(own_doc_markdown(client, section_ids["面试表达"]))
     if not expression_home:
         expression_home = "\n".join(
             [
@@ -714,6 +761,10 @@ def save_state(state: dict[str, Any]) -> None:
 
 def validate_page(content: str, required: list[str], title: str) -> list[str]:
     errors: list[str] = []
+    if re.search(r"(?m)^(title|date|lastmod):\s*", content):
+        errors.append(f"{title}: contains leaked frontmatter metadata")
+    if re.search(r"\[\^\d+\]", content):
+        errors.append(f"{title}: contains exported footnote reference")
     if "????" in content:
         errors.append(f"{title}: contains ????")
     if "\ufffd" in content:
@@ -744,6 +795,8 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     title = payload["problemTitle"]
     problem_hpath = normalize_hpath(root, "题集", title)
     concept_targets = category_paths(root, tag_data)
+    if not concept_targets:
+        raise SiyuanError("缺少可写入的知识点标签，已停止同步。请先根据 tag-rules.md 生成带 evidence 的 tags。")
     review_targets = [(label, normalize_hpath(root, "错题与复习", label)) for label in as_list(ready.get("status"))]
     audit_hpath = normalize_hpath(root, "Codex 同步日志")
     digest = conversation_digest(payload)
@@ -773,7 +826,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     for category, name, hpath in concept_targets:
         cid, created = ensure_doc(client, notebook, hpath, concept_markdown(name, category, problem_id, title))
         concept_refs[name] = page_link(cid, name)
-        existing = export_doc(client, cid) if not created else concept_markdown(name, category, problem_id, title)
+        existing = concept_markdown(name, category, problem_id, title) if created else clean_linked_page_markdown(own_doc_markdown(client, cid))
         updated = append_unique_problem_link(existing, problem_id, title)
         for note in learning_notes.get(name, []):
             updated = append_unique_learning_note(updated, problem_id, title, note)
@@ -782,7 +835,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         concept_results.append({"name": name, "category": category, "id": cid, "url": f"siyuan://blocks/{cid}", "created": created})
         category_hpath = normalize_hpath(root, "知识点", category)
         category_id, category_created = ensure_doc(client, notebook, category_hpath, f"# {category}\n\n## 知识点\n")
-        existing_category = own_doc_markdown(client, category_id)
+        existing_category = clean_linked_page_markdown(own_doc_markdown(client, category_id))
         updated_category = append_unique_concept_link(existing_category, cid, name)
         if updated_category != existing_category:
             update_doc(client, category_id, updated_category)
@@ -800,7 +853,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     for label, hpath in review_targets:
         rid, created = ensure_doc(client, notebook, hpath, review_markdown(label, problem_id, title))
         if not created:
-            existing = export_doc(client, rid)
+            existing = clean_linked_page_markdown(own_doc_markdown(client, rid))
             updated = append_unique_problem_link(existing, problem_id, title)
             if updated != existing:
                 update_doc(client, rid, updated)
@@ -820,7 +873,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
             "",
         ]
     )
-    existing_audit = own_doc_markdown(client, audit_id)
+    existing_audit = clean_linked_page_markdown(own_doc_markdown(client, audit_id))
     update_doc(client, audit_id, audit_with_intro(existing_audit, audit_entry))
 
     homepage_results = update_homepages(
@@ -838,7 +891,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     client.data("/api/sqlite/flushTransaction", {})
 
     validation_errors: list[str] = []
-    problem_content = export_doc(client, problem_id)
+    problem_content = own_doc_markdown(client, problem_id)
     digest_required: list[str] = []
     if digest_has_content(digest):
         for value in [
@@ -858,23 +911,31 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         )
     )
     for item in concept_results:
-        content = export_doc(client, item["id"])
+        content = own_doc_markdown(client, item["id"])
         validation_errors.extend(validate_page(content, [title] + learning_notes.get(item["name"], []), f"concept:{item['name']}"))
     for item in category_results.values():
-        content = get_block_kramdown(client, item["id"])
-        validation_errors.extend(validate_page(content, ["## 知识点"], f"category:{item['category']}"))
+        content = own_doc_markdown(client, item["id"])
+        concept_names = [concept["name"] for concept in concept_results if concept["category"] == item["category"]]
+        validation_errors.extend(validate_page(content, ["## 知识点"] + concept_names, f"category:{item['category']}"))
     for item in review_results:
-        content = export_doc(client, item["id"])
+        content = own_doc_markdown(client, item["id"])
         validation_errors.extend(validate_page(content, [title], f"review:{item['label']}"))
     for name, item in homepage_results["sections"].items():
         if name == "Codex 同步日志":
             continue
-        content = get_block_kramdown(client, item["id"])
-        validation_errors.extend(validate_page(content, [], f"homepage:{name}"))
+        content = own_doc_markdown(client, item["id"])
+        required: list[str] = []
+        if name == "题集":
+            required = [title]
+        elif name == "知识点":
+            required = unique(CATEGORY_ORDER + [item["name"] for item in concept_results])
+        elif name in {"错题与复习", "面试表达"}:
+            required = [title]
+        validation_errors.extend(validate_page(content, required, f"homepage:{name}"))
         if len(content.strip()) < 40:
             validation_errors.append(f"homepage:{name}: unexpectedly empty")
-    root_home = get_block_kramdown(client, homepage_results["root"]["id"])
-    validation_errors.extend(validate_page(root_home, [], "homepage:root"))
+    root_home = own_doc_markdown(client, homepage_results["root"]["id"])
+    validation_errors.extend(validate_page(root_home, [title], "homepage:root"))
     if len(root_home.strip()) < 40:
         validation_errors.append("homepage:root: unexpectedly empty")
     if validation_errors:

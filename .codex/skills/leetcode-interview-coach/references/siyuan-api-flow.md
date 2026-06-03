@@ -17,7 +17,7 @@ Use only public APIs from `siyuan-note/siyuan`:
 - `/api/notebook/lsNotebooks`
 - `/api/filetree/getIDsByHPath`
 - `/api/filetree/createDocWithMd`
-- `/api/export/exportMdContent`
+- `/api/export/exportMdContent` for optional diagnostics only; do not use it as a write-back or user-facing validation source.
 - `/api/block/updateBlock`
 - `/api/block/appendBlock`
 - `/api/sqlite/flushTransaction`
@@ -80,4 +80,4 @@ Do not print the token.
 - Use `createDocWithMd` only for missing documents.
 - Do not expose `<!-- codex-* -->` markers in SiYuan pages.
 
-After sync, validate exported content and return `siyuan://blocks/<id>` links for the problem and touched pages.
+After sync, validate current-block Markdown from `/api/block/getBlockKramdown` and return `siyuan://blocks/<id>` links for the problem and touched pages.
