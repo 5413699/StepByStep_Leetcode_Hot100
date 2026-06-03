@@ -413,7 +413,7 @@ def append_unique_concept_link(markdown: str, concept_id: str, name: str) -> str
 def append_unique_learning_note(markdown: str, problem_id: str, title: str, note: str) -> str:
     markdown = markdown.replace("- 暂无自动补充。\n", "").replace("- 暂无自动补充。", "")
     line = f"- {problem_ref(problem_id, title)}：{note}"
-    return append_unique_under_heading(markdown, "来自题目的理解", line, problem_id, note)
+    return append_unique_under_heading(markdown, "来自题目的理解", line, note)
 
 
 def concept_markdown(name: str, category: str, problem_id: str, title: str) -> str:
@@ -842,10 +842,10 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     digest_required: list[str] = []
     if digest_has_content(digest):
         for value in [
-            digest.get("firstReaction"),
-            (digest.get("stuckPoints") or [""])[0],
-            (digest.get("breakthroughs") or [""])[0],
-            digest.get("interviewExpression"),
+            payload.get("firstReactionMarkdown") or digest.get("firstReaction"),
+            (as_list(ready.get("weakPoints")) + as_list(digest.get("stuckPoints")) or [""])[0],
+            payload.get("breakthroughMarkdown") or (digest.get("breakthroughs") or [""])[0],
+            payload.get("interviewExpressionMarkdown") or digest.get("interviewExpression"),
         ]:
             text = as_text(value)
             if text:
