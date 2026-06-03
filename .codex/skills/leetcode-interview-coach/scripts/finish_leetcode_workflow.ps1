@@ -19,6 +19,7 @@ param(
     [string[]]$Pitfalls = @(),
     [string]$TagPlanJson,
     [string]$ReadinessJson,
+    [string]$ConversationDigestJson,
     [string]$SyncInputJson,
     [string]$WorkflowConfigPath,
     [switch]$SkipSiyuan,
@@ -26,6 +27,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
+$env:PYTHONUTF8 = "1"
 
 if (-not (Test-Path -LiteralPath ".git")) {
     throw "This script must run from the repository root."
@@ -96,6 +101,10 @@ if (-not $SkipSiyuan) {
         if ($TagPlanJson) {
             $tagPlan = Get-Content -LiteralPath $TagPlanJson -Raw -Encoding UTF8 | ConvertFrom-Json
         }
+        $conversationDigest = $null
+        if ($ConversationDigestJson) {
+            $conversationDigest = Get-Content -LiteralPath $ConversationDigestJson -Raw -Encoding UTF8 | ConvertFrom-Json
+        }
         $payload = [ordered]@{
             problemTitle = $ProblemTitle
             statementMarkdown = $StatementMarkdown
@@ -107,6 +116,7 @@ if (-not $SkipSiyuan) {
             tags = $(if ($tagPlan -and $tagPlan.tags) { $tagPlan.tags } else { @{} })
             tagEvidence = $(if ($tagPlan -and $tagPlan.tagEvidence) { $tagPlan.tagEvidence } else { @{} })
             readiness = $(if ($ReadinessJson) { Get-Content -LiteralPath $ReadinessJson -Raw -Encoding UTF8 | ConvertFrom-Json } else { @{} })
+            conversationDigest = $(if ($conversationDigest) { $conversationDigest } else { @{} })
             git = @{
                 branch = $branch
                 commit = $commit

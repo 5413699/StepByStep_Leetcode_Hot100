@@ -137,6 +137,10 @@ def block_ref(block_id: str, text: str) -> str:
     return f'(({block_id} "{escaped}"))'
 
 
+def page_link(block_id: str, text: str) -> str:
+    return block_ref(block_id, text)
+
+
 def test_url(base_url: str, token: str) -> bool:
     try:
         client = SiyuanClient(base_url, token, push_notification=False)
@@ -251,10 +255,14 @@ def export_doc(client: SiyuanClient, doc_id: str) -> str:
     return data.get("content") or ""
 
 
+def get_block_kramdown(client: SiyuanClient, block_id: str) -> str:
+    data = client.data("/api/block/getBlockKramdown", {"id": block_id}) or {}
+    return data.get("kramdown") or ""
+
+
 def update_doc(client: SiyuanClient, doc_id: str, markdown: str) -> None:
     client.data("/api/block/updateBlock", {"id": doc_id, "dataType": "markdown", "data": markdown})
 
 
 def append_doc(client: SiyuanClient, doc_id: str, markdown: str) -> None:
     client.data("/api/block/appendBlock", {"parentID": doc_id, "dataType": "markdown", "data": markdown})
-

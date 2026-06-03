@@ -11,6 +11,7 @@ Use these rules to generate the tag plan consumed by SiYuan sync. This module is
     "dataStructures": ["矩阵", "图论"],
     "methods": ["DFS"],
     "patterns": ["网格搜索", "连通块", "Flood Fill"],
+    "commonFunctions": [],
     "readiness": ["提示后完成", "需要二刷"]
   },
   "tagEvidence": {
@@ -56,6 +57,23 @@ Only write tags with clear evidence. Put low-confidence tags in `suggestedTags`.
 - tree lowest common ancestor: `最近公共祖先`
 - LRU with hash map and doubly linked list: `双向链表`, `LRU`
 
+## Common Function Tags
+
+Use `commonFunctions` only when the user's notes or solution explicitly emphasize reusable Java API usage, for example:
+
+- `数组Array的常用函数`
+- `可变数组的常用函数`
+- `哈希映射hashmap的常用函数`
+- `队列Queue的常用函数`
+- `Collections的常用函数`
+
+Normalize aliases before writing to SiYuan:
+
+- `Array`, `Arrays` -> `数组Array的常用函数`
+- `ArrayList`, `List` -> `可变数组的常用函数`
+- `HashMap`, `Map` -> `哈希映射hashmap的常用函数`
+- `Queue`, `LinkedList` when used as a queue -> `队列Queue的常用函数`
+
 ## Evidence Rules
 
 Each written tag needs one concrete reason:
@@ -65,6 +83,8 @@ Each written tag needs one concrete reason:
 - From final code.
 - From the user's stated thinking.
 - From the observed coaching process for readiness tags.
+
+Conversation digest `conceptUpdates` may update concept pages only when the concept is already present in a written tag group or has clear evidence in `tagEvidence`. Low-confidence concepts should be placed in `suggestedTags` and should not be written into SiYuan concept pages.
 
 ## Readiness Tags
 

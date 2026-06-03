@@ -1,6 +1,6 @@
 ---
 name: leetcode-interview-coach
-description: LeetCode interview hand-coding training system for this repository. Use when Codex needs to scaffold a Java LeetCode problem, coach the user through algorithm thinking, review or polish the user's solution, insert the final answer, update repository notes, commit and push, assess interview readiness, plan reviews, or sync the completed learning record into the user's SiYuan interview-prep wiki with concept backlinks and audit logs.
+description: LeetCode interview hand-coding training system for this repository. Use when Codex needs to scaffold a Java LeetCode problem, coach the user through algorithm thinking, review or polish the user's solution, insert the final answer, extract a current-problem learning digest from the coaching conversation, update repository notes, commit and push, assess interview readiness, plan reviews, or sync the completed learning record into the user's SiYuan interview-prep wiki with concept backlinks and audit logs.
 ---
 
 # LeetCode Interview Coach
@@ -24,6 +24,10 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - **Finish a completed solution**: read `references/finish-flow.md`.
   - Triggers: "最终答案", "帮我整理", "帮我提交", "收尾", "这版通过了", "一次运行成功".
   - Output: integrated Java answer, updated project note, readiness assessment, Maven compile, Git commit, push, optional SiYuan sync.
+
+- **Extract current-problem learning digest**: read `references/conversation-digest-schema.md`.
+  - Use inside finish flow before repository completion or SiYuan sync.
+  - Output: a problem-scoped summary of the user's first reaction, stuck points, corrections, breakthroughs, implementation notes, edge cases, interview expression, review advice, and concept updates.
 
 - **Sync to SiYuan wiki**: read `references/siyuan-api-flow.md`.
   - Triggers: "同步思源", "生成 wiki 笔记", or finish flow with SiYuan enabled.
@@ -57,6 +61,8 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - Never write Chinese or emoji-rich SiYuan page bodies through ad hoc PowerShell string concatenation. Use the UTF-8 Python API layer and ASCII temp file paths.
 - SiYuan user-visible pages must not contain `<!-- codex-* -->` markers. Those markers may remain in repository Markdown only.
 - The new SiYuan target structure is authoritative: `算法题/面试手撕训练系统`. Legacy pages may be migrated into it, but new writes must not create new knowledge pages under the old `按数据结构分类` / `按方法分类` layout.
+- Stop before writing to SiYuan if a title, HPath, concept name, review label, or tag appears corrupted, including any ASCII `?`, Unicode replacement characters, or visible mojibake detected by the sync script. Do not create pages such as `??` or `M200-????`.
+- SiYuan review pages must stay signal-only: create review label pages only when a real problem is linked. Audit logs must be newest-first and retain only the last 7 days.
 - One-time migration from legacy SiYuan pages is handled by `leetcode-siyuan-migrator`, dry-run first and non-destructive by default.
 - Before editing repository files, inspect the target files and current `git status --short --branch`.
 - Preserve unrelated user changes. Stage only files explicitly relevant to the current problem or skill iteration.
@@ -69,10 +75,11 @@ When the user reaches a final answer:
 2. Replace only the marked LeetCode solution region.
 3. Update only the intended repository note region.
 4. Generate a tag plan with evidence.
-5. Generate an interview-readiness assessment and review labels.
-6. Run `mvn -q -DskipTests compile`.
-7. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
-8. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate exported content, and report failure without rolling back Git.
+5. Generate a current-problem conversation digest. Include only the interaction about this problem from scaffold/coaching to closeout; exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
+6. Generate an interview-readiness assessment and review labels.
+7. Run `mvn -q -DskipTests compile`.
+8. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
+9. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate exported content, and report failure without rolling back Git.
 
 ## User-Facing Closeout
 

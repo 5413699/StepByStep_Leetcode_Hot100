@@ -75,6 +75,7 @@ Do not print the token.
 
 - Problem HPath: `{systemRootHPath}/题集/{problemTitle}`
 - Concept HPaths are defined by `references/siyuan-wiki-policy.md`.
+- Validate all generated titles, labels, concept names, tags, and HPaths before any write. If corrupted metadata is detected, stop and report the field; do not create fallback pages.
 - Use `getIDsByHPath` to dedupe.
 - Use `createDocWithMd` only for missing documents.
 - Do not expose `<!-- codex-* -->` markers in SiYuan pages.

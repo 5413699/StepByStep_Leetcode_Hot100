@@ -5,26 +5,87 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from siyuan_client import (
     DEFAULT_CONFIG,
     SiyuanError,
-    block_ref,
     ensure_doc,
     export_doc,
+    get_block_kramdown,
     load_config,
     load_json,
     normalize_hpath,
     open_client_from_config,
+    page_link,
     update_doc,
 )
 
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+
 STATE_PATH = Path.home() / ".codex" / "leetcode-hot100-siyuan-state.json"
+AUDIT_RETENTION_DAYS = 7
+
+CATEGORY_ORDER = ["数据结构", "解题方法", "解题模式", "常用函数"]
+
+CATEGORY_DESCRIPTIONS = {
+    "数据结构": "先判断题目操作的对象是什么，例如树、数组、矩阵、队列、哈希映射或图。",
+    "解题方法": "再判断用什么遍历、递归、搜索、前缀和等方法把问题拆开。",
+    "解题模式": "沉淀可迁移的题型模式，例如网格搜索、连通块、Flood Fill。",
+    "常用函数": "把 Java API 的高频使用方式单独复习，降低手写时的语法损耗。",
+}
+
+REVIEW_LABEL_DESCRIPTIONS = {
+    "一刷卡壳": "首次做题时无法稳定找到切入点，优先复盘题型识别信号。",
+    "提示后完成": "提示后能做出，说明模式正在形成，需要二刷固化。",
+    "独立完成": "可以独立完成，后续重点保持速度、边界和表达稳定。",
+    "代码有 bug": "思路基本正确，但实现细节或边界条件还不稳定。",
+    "面试表达不熟": "能写代码但讲述不够清晰，需要专项练习表达。",
+    "需要二刷": "涉及高频模式或关键卡点，应进入下一轮复习。",
+}
+
+MOJIBAKE_PROBE_TERMS = ["算法", "面试", "手撕", "训练", "添加", "教我", "提交"]
+
+
+def utf8_as_gbk_mojibake(text: str) -> str:
+    return text.encode("utf-8").decode("gbk", errors="ignore")
+
+
+CORRUPTION_MARKERS = list(
+    dict.fromkeys(
+        [
+            "?",
+            "\ufffd",
+            "\u951f\u65a4\u62f7",
+            "\u00ef\u00bf\u00bd",
+            *[utf8_as_gbk_mojibake(term) for term in MOJIBAKE_PROBE_TERMS],
+        ]
+    )
+)
+CONTENT_CORRUPTION_MARKERS = [marker for marker in CORRUPTION_MARKERS if marker != "?"]
+
+TAG_ALIASES = {
+    "commonFunctions": {
+        "Array": "数组Array的常用函数",
+        "Arrays": "数组Array的常用函数",
+        "array": "数组Array的常用函数",
+        "ArrayList": "可变数组的常用函数",
+        "List": "可变数组的常用函数",
+        "HashMap": "哈希映射hashmap的常用函数",
+        "Map": "哈希映射hashmap的常用函数",
+        "Queue": "队列Queue的常用函数",
+        "LinkedList": "队列Queue的常用函数",
+    }
+}
 
 
 CONCEPT_INTROS = {
@@ -53,6 +114,51 @@ CONCEPT_INTROS = {
         "signals": ["元素之间存在连接关系", "题目出现路径、连通、依赖或网络", "矩阵格子可抽象成节点"],
         "pitfalls": ["没有 visited 导致重复访问", "有向/无向关系判断错误", "边界状态没有建模清楚"],
     },
+    "Flood Fill": {
+        "intro": "Flood Fill 从一个种子位置出发，把同一连通区域全部访问或改色，常见于岛屿、染色和区域填充问题。",
+        "signals": ["从一个格子扩散到同类格子", "需要把一整片区域标记掉", "题目强调上下左右相邻"],
+        "pitfalls": ["先判断边界再访问 grid", "标记要发生在继续递归前", "字符矩阵要使用 `'1'`、`'0'`"],
+    },
+    "网格搜索": {
+        "intro": "网格搜索把二维数组中的格子看成状态，核心是坐标、边界判断和方向数组。",
+        "signals": ["输入是二维数组或矩阵", "需要上下左右移动", "要遍历每个格子寻找搜索起点"],
+        "pitfalls": ["行列下标写反", "边界条件遗漏 `i < 0` 或 `i >= m`", "原地修改前没有确认题目允许"],
+    },
+    "连通块": {
+        "intro": "连通块表示通过相邻关系连成的一组节点，常见任务是统计块数、面积或判断连通性。",
+        "signals": ["发现一个未访问节点就代表一个新区域", "同一块中的节点能通过相邻关系互相到达", "需要整块标记避免重复计数"],
+        "pitfalls": ["在块内每个节点都计数导致重复", "visited 标记不完整", "方向关系和题目定义不一致"],
+    },
+    "二叉树": {
+        "intro": "二叉树题通常把问题拆成当前节点、左子树、右子树，用递归或层序遍历组合答案。",
+        "signals": ["题目给出 TreeNode", "答案依赖左右子树结果", "可以把整棵树问题缩小到某个子树"],
+        "pitfalls": ["空节点返回值和题意不匹配", "递归返回值与全局答案混淆", "路径类题目误把左右两边都返回给父节点"],
+    },
+    "递归法": {
+        "intro": "递归法把大问题拆成同结构的小问题，重点是函数语义、终止条件、参数和返回值。",
+        "signals": ["当前问题可以交给子问题先解决", "树、链表、区间天然可递归", "需要从子结构返回信息给父结构"],
+        "pitfalls": ["辅助函数参数缺少递归状态", "终止条件不覆盖空结构", "只照抄主函数入参导致表达力不足"],
+    },
+    "数组": {
+        "intro": "数组题围绕下标、区间、顺序和原地修改展开，常与双指针、二分、滑动窗口配合。",
+        "signals": ["输入是 int[] 或顺序列表", "需要按下标遍历、交换或统计", "题目强调有序数组"],
+        "pitfalls": ["区间开闭不统一", "空数组和单元素边界遗漏", "修改数组前未确认是否允许"],
+    },
+    "可变数组": {
+        "intro": "可变数组通常对应 ArrayList，适合动态收集遍历结果、层结果或不定长答案。",
+        "signals": ["返回 List 或 List<List<...>>", "结果数量不固定", "需要按顺序追加答案"],
+        "pitfalls": ["复用同一个临时列表导致结果被后续修改", "泛型类型不完整", "每层结果没有单独创建"],
+    },
+    "哈希映射": {
+        "intro": "哈希映射用 key 快速定位 value，适合计数、索引映射、前缀和统计和缓存状态。",
+        "signals": ["需要 O(1) 查询是否出现过", "需要记录出现次数或下标", "暴力查找中存在重复扫描"],
+        "pitfalls": ["默认值语义错误", "key 类型没有防溢出", "回溯场景离开节点没有撤销计数"],
+    },
+    "队列": {
+        "intro": "队列先进先出，常用于 BFS、层序遍历和按到达顺序处理状态。",
+        "signals": ["需要按层访问节点", "状态从起点一圈圈扩散", "每次处理最早加入的元素"],
+        "pitfalls": ["循环条件写成 queue != null", "层序遍历没有固定当前层 size", "空节点直接入队"],
+    },
 }
 
 
@@ -66,13 +172,36 @@ def unique(items: list[str]) -> list[str]:
     return result
 
 
+def as_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def as_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [as_text(item) for item in value if as_text(item)]
+    if isinstance(value, tuple):
+        return [as_text(item) for item in value if as_text(item)]
+    text = as_text(value)
+    return [text] if text else []
+
+
+def normalize_tag_group(group: str, items: Any) -> list[str]:
+    aliases = TAG_ALIASES.get(group, {})
+    return unique([aliases.get(item, item) for item in as_list(items)])
+
+
 def tags(payload: dict[str, Any]) -> dict[str, list[str]]:
     raw = payload.get("tags") or {}
     return {
-        "dataStructures": unique(raw.get("dataStructures") or []),
-        "methods": unique(raw.get("methods") or []),
-        "patterns": unique(raw.get("patterns") or []),
-        "readiness": unique(raw.get("readiness") or []),
+        "dataStructures": normalize_tag_group("dataStructures", raw.get("dataStructures") or []),
+        "methods": normalize_tag_group("methods", raw.get("methods") or []),
+        "patterns": normalize_tag_group("patterns", raw.get("patterns") or []),
+        "commonFunctions": normalize_tag_group("commonFunctions", raw.get("commonFunctions") or []),
+        "readiness": normalize_tag_group("readiness", raw.get("readiness") or []),
     }
 
 
@@ -86,17 +215,205 @@ def readiness(payload: dict[str, Any]) -> dict[str, Any]:
     return raw
 
 
+def conversation_digest(payload: dict[str, Any]) -> dict[str, Any]:
+    raw = payload.get("conversationDigest") or {}
+    if not isinstance(raw, dict):
+        return {}
+
+    misconceptions: list[dict[str, str]] = []
+    for item in raw.get("misconceptions") or []:
+        if not isinstance(item, dict):
+            continue
+        before = as_text(item.get("before"))
+        after = as_text(item.get("after"))
+        if before or after:
+            misconceptions.append({"before": before, "after": after})
+
+    concept_updates: list[dict[str, str]] = []
+    for item in raw.get("conceptUpdates") or []:
+        if not isinstance(item, dict):
+            continue
+        concept = as_text(item.get("concept"))
+        note = as_text(item.get("note"))
+        if concept and note:
+            concept_updates.append({"concept": concept, "note": note})
+
+    return {
+        "firstReaction": as_text(raw.get("firstReaction")),
+        "stuckPoints": as_list(raw.get("stuckPoints")),
+        "misconceptions": misconceptions,
+        "breakthroughs": as_list(raw.get("breakthroughs")),
+        "implementationNotes": as_list(raw.get("implementationNotes")),
+        "edgeCases": as_list(raw.get("edgeCases")),
+        "interviewExpression": as_text(raw.get("interviewExpression")),
+        "reviewAdvice": as_list(raw.get("reviewAdvice")),
+        "conceptUpdates": concept_updates,
+    }
+
+
+def digest_has_content(digest: dict[str, Any]) -> bool:
+    return any(
+        [
+            as_text(digest.get("firstReaction")),
+            digest.get("stuckPoints"),
+            digest.get("misconceptions"),
+            digest.get("breakthroughs"),
+            digest.get("implementationNotes"),
+            digest.get("edgeCases"),
+            as_text(digest.get("interviewExpression")),
+            digest.get("reviewAdvice"),
+            digest.get("conceptUpdates"),
+        ]
+    )
+
+
+def process_markdown(payload: dict[str, Any], digest: dict[str, Any]) -> str:
+    explicit = as_text(payload.get("processMarkdown"))
+    lines: list[str] = []
+    if explicit:
+        lines.append(explicit)
+    if digest.get("misconceptions"):
+        lines.extend(["", "### 误区纠正", ""])
+        for item in digest["misconceptions"]:
+            before = item.get("before") or "未记录"
+            after = item.get("after") or "未记录"
+            lines.append(f"- 原先：{before}")
+            lines.append(f"  修正：{after}")
+    if digest.get("implementationNotes"):
+        lines.extend(["", "### 实现细节", ""])
+        lines.extend([f"- {item}" for item in digest["implementationNotes"]])
+    if digest.get("edgeCases"):
+        lines.extend(["", "### 边界与类型", ""])
+        lines.extend([f"- {item}" for item in digest["edgeCases"]])
+    return "\n".join(lines).strip()
+
+
+def concept_update_notes(payload: dict[str, Any], tag_data: dict[str, list[str]] | None = None) -> dict[str, list[str]]:
+    allowed: set[str] = set()
+    if tag_data:
+        for group in ["dataStructures", "methods", "patterns", "commonFunctions"]:
+            allowed.update(tag_data.get(group) or [])
+    result: dict[str, list[str]] = {}
+    for item in conversation_digest(payload).get("conceptUpdates", []):
+        concept = item["concept"]
+        if allowed and concept not in allowed:
+            continue
+        result.setdefault(concept, [])
+        result[concept].append(item["note"])
+    return {key: unique(value) for key, value in result.items()}
+
+
+def is_probably_corrupted_text(text: str) -> bool:
+    if not text:
+        return False
+    if "?" in text:
+        return True
+    if "????" in text:
+        return True
+    if "\ufffd" in text:
+        return True
+    for marker in CORRUPTION_MARKERS:
+        if marker and marker != "?" and marker in text:
+            return True
+    if re.search(r"(?<!\w)\?{2,}(?!\w)", text):
+        return True
+    return False
+
+
+def collect_named_strings(value: Any, path: str = "$") -> list[tuple[str, str]]:
+    result: list[tuple[str, str]] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key in {"problemTitle", "title", "name", "label", "concept", "hPath", "path", "systemRootHPath"}:
+                if isinstance(child, str):
+                    result.append((child_path, child))
+            result.extend(collect_named_strings(child, child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            result.extend(collect_named_strings(child, f"{path}[{index}]"))
+    return result
+
+
+def validate_sync_text_inputs(payload: dict[str, Any], root: str, plan: dict[str, Any]) -> None:
+    candidates: list[tuple[str, str]] = [("wikiPolicy.systemRootHPath", root)]
+    candidates.extend(collect_named_strings(payload))
+    candidates.extend(collect_named_strings(plan, "plan"))
+    bad = [(path, text) for path, text in candidates if is_probably_corrupted_text(text)]
+    if bad:
+        details = "; ".join(f"{path}={text!r}" for path, text in bad[:12])
+        raise SiyuanError(
+            "检测到疑似编码损坏的标题、标签或路径，已停止写入思源，避免创建 ??/???? 页面："
+            + details
+        )
+
+
 def problem_ref(problem_id: str, title: str) -> str:
-    return block_ref(problem_id, title)
+    return page_link(problem_id, title)
+
+
+def append_unique_under_heading(markdown: str, heading: str, line: str, *dedupe_keys: str) -> str:
+    if any(key and key in markdown for key in dedupe_keys) or line in markdown:
+        return markdown
+    entry = line if line.startswith("- ") else f"- {line}"
+    pattern = re.compile(rf"(?ms)(^##\s*{re.escape(heading)}\s*\n)(.*?)(?=^##\s+|\Z)")
+    match = pattern.search(markdown)
+    if not match:
+        return markdown.rstrip() + f"\n\n## {heading}\n\n{entry}\n"
+    body = match.group(2).rstrip()
+    replacement = match.group(1) + (body + "\n" if body else "\n") + entry + "\n"
+    return markdown[: match.start()] + replacement + markdown[match.end() :]
+
+
+def strip_block_markdown(markdown: str) -> str:
+    text = re.sub(r"(?ms)(?:\A|\n)---\s*\n.*?\n---\s*(?=\n|\Z)", "\n", markdown.strip())
+    text = re.sub(r"\{:\s+[^}]*\}", "", text)
+    text = re.sub(r"(?m)^#\s+.+$", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def own_doc_markdown(client: Any, doc_id: str) -> str:
+    return strip_block_markdown(get_block_kramdown(client, doc_id))
+
+
+def retain_recent_audit_entries(markdown: str, now: datetime) -> str:
+    body = re.sub(r"(?ms)^##\s*说明\s*\n.*?(?=^##\s+|\Z)", "", markdown).strip()
+    entries: list[tuple[datetime, str]] = []
+    for match in re.finditer(r"(?ms)^##\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}).*?\n.*?(?=^##\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}|\Z)", body):
+        stamp = datetime.strptime(match.group(1) + " " + match.group(2), "%Y-%m-%d %H:%M")
+        if stamp >= now - timedelta(days=AUDIT_RETENTION_DAYS):
+            entries.append((stamp, match.group(0).strip()))
+    entries.sort(key=lambda item: item[0], reverse=True)
+    return "\n\n".join(entry for _, entry in entries)
+
+
+def audit_with_intro(existing: str, entry: str) -> str:
+    intro = "## 说明\n\n这里记录 Codex 对面试训练系统进行的同步、收尾、修复和验证操作，供用户审阅。"
+    retained = retain_recent_audit_entries(existing, datetime.now())
+    return intro + "\n\n" + entry.strip() + ("\n\n" + retained if retained else "") + "\n"
+
+
+def ensure_heading(markdown: str, heading: str, intro: str = "") -> str:
+    if re.search(rf"(?m)^##\s*{re.escape(heading)}\s*$", markdown):
+        return markdown
+    body = markdown.rstrip()
+    addition = f"## {heading}\n\n{intro.strip()}\n" if intro.strip() else f"## {heading}\n"
+    return (body + "\n\n" + addition if body else addition).strip() + "\n"
 
 
 def append_unique_problem_link(markdown: str, problem_id: str, title: str) -> str:
-    if problem_id in markdown or title in markdown:
-        return markdown
-    link = problem_ref(problem_id, title)
-    if "## 题集" in markdown:
-        return markdown.rstrip() + f"\n- {link}\n"
-    return markdown.rstrip() + f"\n\n## 题集\n\n- {link}\n"
+    return append_unique_under_heading(markdown, "题集", f"- {problem_ref(problem_id, title)}", problem_id, title)
+
+
+def append_unique_concept_link(markdown: str, concept_id: str, name: str) -> str:
+    return append_unique_under_heading(markdown, "知识点", f"- {page_link(concept_id, name)}", concept_id, name)
+
+
+def append_unique_learning_note(markdown: str, problem_id: str, title: str, note: str) -> str:
+    markdown = markdown.replace("- 暂无自动补充。\n", "").replace("- 暂无自动补充。", "")
+    line = f"- {problem_ref(problem_id, title)}：{note}"
+    return append_unique_under_heading(markdown, "来自题目的理解", line, problem_id, note)
 
 
 def concept_markdown(name: str, category: str, problem_id: str, title: str) -> str:
@@ -104,9 +421,17 @@ def concept_markdown(name: str, category: str, problem_id: str, title: str) -> s
     intro = preset.get("intro") or f"{name} 是面试手撕题中的一个高频知识点，需要结合题目特征、代码模板和易错点复习。"
     signals = preset.get("signals") or ["题目特征稳定指向该知识点", "代码中明确使用该方法或结构"]
     pitfalls = preset.get("pitfalls") or ["只记结论不理解适用条件", "模板细节和边界条件容易写错"]
+    templates = {
+        "DFS": ["private void dfs(...) {", "    if (越界或状态非法) return;", "    标记当前状态;", "    dfs(下一个状态);", "}"],
+        "BFS": ["Queue<Node> queue = new LinkedList<>();", "while (!queue.isEmpty()) {", "    int size = queue.size();", "    // 处理当前层", "}"],
+        "Flood Fill": ["if (越界 || grid[i][j] != 目标状态) return;", "grid[i][j] = 已访问状态;", "dfs(i + 1, j);"],
+        "网格搜索": ["int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};", "for (int[] d : dirs) { ... }"],
+        "连通块": ["if (发现未访问节点) {", "    count++;", "    dfs/bfs 标记整个连通块;", "}"],
+        "二叉树": ["if (root == null) return ...;", "left = dfs(root.left);", "right = dfs(root.right);"],
+        "递归法": ["private Type helper(Node node, State state) {", "    if (node == null) return base;", "}"],
+    }
+    template_lines = templates.get(name, ["// 结合具体题型补充模板"])
     lines = [
-        f"# {name}",
-        "",
         "## 简介",
         "",
         intro,
@@ -118,7 +443,7 @@ def concept_markdown(name: str, category: str, problem_id: str, title: str) -> s
         "## 常见代码结构",
         "",
         "```java",
-        "// 根据具体题型补充模板",
+        *template_lines,
         "```",
         "",
         "## 高频易错点",
@@ -128,6 +453,10 @@ def concept_markdown(name: str, category: str, problem_id: str, title: str) -> s
         "## 题集",
         "",
         f"- {problem_ref(problem_id, title)}",
+        "",
+        "## 来自题目的理解",
+        "",
+        "- 暂无自动补充。",
     ]
     if category:
         lines.insert(2, f"分类：{category}")
@@ -146,8 +475,6 @@ def review_markdown(label: str, problem_id: str, title: str) -> str:
     }
     return "\n".join(
         [
-            f"# {label}",
-            "",
             "## 说明",
             "",
             descriptions.get(label, "该复习标签用于跟踪需要再次巩固的题目。"),
@@ -159,22 +486,136 @@ def review_markdown(label: str, problem_id: str, title: str) -> str:
     ).strip() + "\n"
 
 
+def update_homepages(
+    client: Any,
+    notebook: str,
+    root: str,
+    *,
+    problem_id: str,
+    title: str,
+    concept_results: list[dict[str, Any]],
+    category_results: dict[str, dict[str, Any]],
+    review_results: list[dict[str, Any]],
+    audit_id: str,
+) -> dict[str, Any]:
+    section_ids: dict[str, str] = {}
+    for name in ["题集", "知识点", "错题与复习", "面试表达", "Codex 同步日志"]:
+        sid, _ = ensure_doc(client, notebook, normalize_hpath(root, name), "")
+        section_ids[name] = sid
+    root_id, _ = ensure_doc(client, notebook, normalize_hpath(root), "")
+
+    root_md = own_doc_markdown(client, root_id)
+    if not root_md:
+        root_md = "\n".join(
+            [
+                "## 今日入口",
+                "",
+                f"- {page_link(section_ids['题集'], '题集')}：按题号复习已经整理过的 Hot100 题目。",
+                f"- {page_link(section_ids['知识点'], '知识点')}：按数据结构、方法、模式、常用函数复习。",
+                f"- {page_link(section_ids['错题与复习'], '错题与复习')}：按掌握状态安排二刷和表达训练。",
+                f"- {page_link(section_ids['面试表达'], '面试表达')}：沉淀面试中可直接说出口的解题表达。",
+                f"- {page_link(audit_id, 'Codex 同步日志')}：审阅自动同步、修复和迁移记录。",
+            ]
+        )
+    root_md = ensure_heading(root_md, "最近同步")
+    root_md = append_unique_under_heading(root_md, "最近同步", f"- {problem_ref(problem_id, title)}：{datetime.now().strftime('%Y-%m-%d %H:%M')} 同步", problem_id, title)
+    update_doc(client, root_id, root_md)
+
+    problem_index = own_doc_markdown(client, section_ids["题集"])
+    if not problem_index:
+        problem_index = "## 题目列表\n\n这里按题号汇总已完成整理的题目页。"
+    problem_index = append_unique_under_heading(problem_index, "题目列表", f"- {problem_ref(problem_id, title)}", problem_id, title)
+    update_doc(client, section_ids["题集"], problem_index)
+
+    knowledge_home = own_doc_markdown(client, section_ids["知识点"])
+    if not knowledge_home:
+        lines = ["## 分类入口", ""]
+        for category in CATEGORY_ORDER:
+            category_item = category_results.get(category)
+            if category_item:
+                lines.append(f"- {page_link(category_item['id'], category)}：{CATEGORY_DESCRIPTIONS[category]}")
+            else:
+                lines.append(f"- {category}：{CATEGORY_DESCRIPTIONS[category]}")
+        knowledge_home = "\n".join(lines)
+    knowledge_home = ensure_heading(knowledge_home, "最近关联知识点")
+    for item in concept_results:
+        knowledge_home = append_unique_under_heading(knowledge_home, "最近关联知识点", f"- {page_link(item['id'], item['name'])}：来自 {problem_ref(problem_id, title)}", item["id"], item["name"])
+    update_doc(client, section_ids["知识点"], knowledge_home)
+
+    review_home = own_doc_markdown(client, section_ids["错题与复习"])
+    if not review_home:
+        review_home = "\n".join(
+            [
+                "## 复习原则",
+                "",
+                "这里仅保留需要复盘的真实题目入口。没有题目归档时，不自动堆叠空标签页。",
+                "",
+                "## 当前复习入口",
+                "",
+                "- 暂无自动归档题目。完成题目收尾后，只有带复习标签的题目会出现在这里。",
+            ]
+        )
+    if review_results:
+        review_home = review_home.replace("- 暂无自动归档题目。完成题目收尾后，只有带复习标签的题目会出现在这里。", "").strip()
+        review_home = ensure_heading(review_home, "最近归档")
+        for item in review_results:
+            line = f"- {page_link(item['id'], item['label'])}：{problem_ref(problem_id, title)}"
+            review_home = append_unique_under_heading(review_home, "最近归档", line, line)
+    update_doc(client, section_ids["错题与复习"], review_home)
+
+    expression_home = own_doc_markdown(client, section_ids["面试表达"])
+    if not expression_home:
+        expression_home = "\n".join(
+            [
+                "## 思路表达模板",
+                "",
+                "- 先说明题型识别信号。",
+                "- 再说明核心状态、辅助函数或遍历结构。",
+                "- 然后说明为什么这样更新答案，以及复杂度。",
+                "",
+                "## 复杂度表达",
+                "",
+                "- 时间复杂度先看每个节点、格子或元素被访问几次。",
+                "- 空间复杂度区分辅助结构和递归栈。",
+            ]
+        )
+    expression_home = ensure_heading(expression_home, "最近可练表达题")
+    expression_home = append_unique_under_heading(expression_home, "最近可练表达题", f"- {problem_ref(problem_id, title)}", problem_id, title)
+    update_doc(client, section_ids["面试表达"], expression_home)
+
+    client.data("/api/sqlite/flushTransaction", {})
+    return {
+        "root": {"id": root_id, "url": f"siyuan://blocks/{root_id}"},
+        "sections": {name: {"id": sid, "url": f"siyuan://blocks/{sid}"} for name, sid in section_ids.items()},
+    }
+
+
 def render_problem(payload: dict[str, Any], concept_refs: dict[str, str]) -> str:
     title = payload["problemTitle"]
     git = payload.get("git") or {}
     ready = readiness(payload)
-    status = ready.get("status") or []
-    weak_points = ready.get("weakPoints") or []
-    next_review = ready.get("nextReview") or []
+    status = as_list(ready.get("status"))
+    digest = conversation_digest(payload)
+    weak_points = unique(as_list(ready.get("weakPoints")) + as_list(digest.get("stuckPoints")))
+    next_review = unique(as_list(ready.get("nextReview")) + as_list(digest.get("reviewAdvice")))
     tag_data = tags(payload)
     concept_line = "、".join(concept_refs.values()) or "未标注"
-    first_reaction = payload.get("firstReactionMarkdown") or "（未记录）"
-    breakthrough = payload.get("breakthroughMarkdown") or "（未记录）"
-    interview_expression = payload.get("interviewExpressionMarkdown") or payload.get("thinkingMarkdown", "")
+    first_reaction = as_text(payload.get("firstReactionMarkdown")) or as_text(digest.get("firstReaction")) or "（未记录）"
+    breakthrough_items = as_list(payload.get("breakthroughMarkdown")) + as_list(digest.get("breakthroughs"))
+    breakthrough = "\n".join([f"- {item}" for item in unique(breakthrough_items)]) if breakthrough_items else "（未记录）"
+    interview_expression = (
+        as_text(payload.get("interviewExpressionMarkdown"))
+        or as_text(digest.get("interviewExpression"))
+        or as_text(payload.get("thinkingMarkdown"))
+    )
+    process = process_markdown(payload, digest)
+    pitfall_items = unique(
+        as_list(payload.get("pitfalls"))
+        + as_list(digest.get("implementationNotes"))
+        + as_list(digest.get("edgeCases"))
+    )
 
     lines = [
-        f"# {title}",
-        "",
         f"相关知识点：{concept_line}",
         "",
         "## 题干",
@@ -196,6 +637,10 @@ def render_problem(payload: dict[str, Any], concept_refs: dict[str, str]) -> str
             "",
             breakthrough.strip(),
             "",
+            "## 思考过程",
+            "",
+            process or "（未记录）",
+            "",
             "## 面试版思路",
             "",
             payload.get("thinkingMarkdown", "").strip() or "（未提供）",
@@ -214,7 +659,7 @@ def render_problem(payload: dict[str, Any], concept_refs: dict[str, str]) -> str
             "",
         ]
     )
-    lines.extend([f"- {pitfall}" for pitfall in payload.get("pitfalls", [])] or ["- （未记录）"])
+    lines.extend([f"- {pitfall}" for pitfall in pitfall_items] or ["- （未记录）"])
     lines.extend(
         [
             "",
@@ -251,6 +696,8 @@ def category_paths(root: str, tag_data: dict[str, list[str]]) -> list[tuple[str,
         result.append(("解题方法", name, normalize_hpath(root, "知识点", "解题方法", name)))
     for name in tag_data["patterns"]:
         result.append(("解题模式", name, normalize_hpath(root, "知识点", "解题模式", name)))
+    for name in tag_data["commonFunctions"]:
+        result.append(("常用函数", name, normalize_hpath(root, "知识点", "常用函数", name)))
     return result
 
 
@@ -271,8 +718,14 @@ def validate_page(content: str, required: list[str], title: str) -> list[str]:
         errors.append(f"{title}: contains ????")
     if "\ufffd" in content:
         errors.append(f"{title}: contains replacement character")
+    for marker in CONTENT_CORRUPTION_MARKERS:
+        if marker in content:
+            errors.append(f"{title}: contains mojibake marker {marker}")
     if "<!-- codex-" in content:
         errors.append(f"{title}: contains visible codex marker")
+    for marker in ["<a href=", "## 来源索引", "## 迁移记录", "## 旧笔记内容", "## 迁移补充", "## 旧笔记重组补充"]:
+        if marker in content:
+            errors.append(f"{title}: contains forbidden marker {marker}")
     for item in required:
         if item and item not in content:
             errors.append(f"{title}: missing {item}")
@@ -291,8 +744,9 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     title = payload["problemTitle"]
     problem_hpath = normalize_hpath(root, "题集", title)
     concept_targets = category_paths(root, tag_data)
-    review_targets = [(label, normalize_hpath(root, "错题与复习", label)) for label in ready.get("status", [])]
+    review_targets = [(label, normalize_hpath(root, "错题与复习", label)) for label in as_list(ready.get("status"))]
     audit_hpath = normalize_hpath(root, "Codex 同步日志")
+    digest = conversation_digest(payload)
 
     plan = {
         "dryRun": dry_run,
@@ -300,7 +754,9 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         "concepts": [{"category": cat, "name": name, "hPath": hpath} for cat, name, hpath in concept_targets],
         "reviews": [{"label": label, "hPath": hpath} for label, hpath in review_targets],
         "auditLog": audit_hpath,
+        "conversationDigest": "included" if digest_has_content(digest) else "missing",
     }
+    validate_sync_text_inputs(payload, root, plan)
     if dry_run:
         return plan
 
@@ -311,16 +767,32 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
 
     problem_id, problem_created = ensure_doc(client, notebook, problem_hpath, "")
     concept_refs: dict[str, str] = {}
+    learning_notes = concept_update_notes(payload, tag_data)
     concept_results = []
+    category_results: dict[str, dict[str, Any]] = {}
     for category, name, hpath in concept_targets:
         cid, created = ensure_doc(client, notebook, hpath, concept_markdown(name, category, problem_id, title))
-        concept_refs[name] = block_ref(cid, name)
-        if not created:
-            existing = export_doc(client, cid)
-            updated = append_unique_problem_link(existing, problem_id, title)
-            if updated != existing:
-                update_doc(client, cid, updated)
+        concept_refs[name] = page_link(cid, name)
+        existing = export_doc(client, cid) if not created else concept_markdown(name, category, problem_id, title)
+        updated = append_unique_problem_link(existing, problem_id, title)
+        for note in learning_notes.get(name, []):
+            updated = append_unique_learning_note(updated, problem_id, title, note)
+        if updated != existing:
+            update_doc(client, cid, updated)
         concept_results.append({"name": name, "category": category, "id": cid, "url": f"siyuan://blocks/{cid}", "created": created})
+        category_hpath = normalize_hpath(root, "知识点", category)
+        category_id, category_created = ensure_doc(client, notebook, category_hpath, f"# {category}\n\n## 知识点\n")
+        existing_category = own_doc_markdown(client, category_id)
+        updated_category = append_unique_concept_link(existing_category, cid, name)
+        if updated_category != existing_category:
+            update_doc(client, category_id, updated_category)
+        category_results[category] = {
+            "category": category,
+            "id": category_id,
+            "hPath": category_hpath,
+            "url": f"siyuan://blocks/{category_id}",
+            "created": category_created,
+        }
 
     update_doc(client, problem_id, render_problem(payload, concept_refs))
 
@@ -339,34 +811,72 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         [
             f"## {datetime.now().strftime('%Y-%m-%d %H:%M')} {title}",
             "",
-            f"- 题目页：{block_ref(problem_id, title)}",
+            f"- 题目页：{page_link(problem_id, title)}",
             f"- Git：{(payload.get('git') or {}).get('branch', '未提供')} / {(payload.get('git') or {}).get('commit', '未提供')}",
             f"- 知识点：{'、'.join(item['name'] for item in concept_results) or '无'}",
             f"- 掌握状态：{'、'.join(label for label, _ in review_targets) or '未评估'}",
+            f"- 当前题目对话摘要：{'已写入' if digest_has_content(digest) else '未提供'}",
             "- 校验：待导出校验",
             "",
         ]
     )
-    existing_audit = export_doc(client, audit_id)
-    update_doc(client, audit_id, existing_audit.rstrip() + "\n\n" + audit_entry)
+    existing_audit = own_doc_markdown(client, audit_id)
+    update_doc(client, audit_id, audit_with_intro(existing_audit, audit_entry))
+
+    homepage_results = update_homepages(
+        client,
+        notebook,
+        root,
+        problem_id=problem_id,
+        title=title,
+        concept_results=concept_results,
+        category_results=category_results,
+        review_results=review_results,
+        audit_id=audit_id,
+    )
 
     client.data("/api/sqlite/flushTransaction", {})
 
     validation_errors: list[str] = []
     problem_content = export_doc(client, problem_id)
+    digest_required: list[str] = []
+    if digest_has_content(digest):
+        for value in [
+            digest.get("firstReaction"),
+            (digest.get("stuckPoints") or [""])[0],
+            (digest.get("breakthroughs") or [""])[0],
+            digest.get("interviewExpression"),
+        ]:
+            text = as_text(value)
+            if text:
+                digest_required.append(text)
     validation_errors.extend(
         validate_page(
             problem_content,
-            [title, "面试版思路", "最终题解", "掌握状态", (payload.get("git") or {}).get("commit", "")],
+            [title, "面试版思路", "最终题解", "掌握状态", (payload.get("git") or {}).get("commit", "")] + digest_required,
             "problem",
         )
     )
     for item in concept_results:
         content = export_doc(client, item["id"])
-        validation_errors.extend(validate_page(content, [title], f"concept:{item['name']}"))
+        validation_errors.extend(validate_page(content, [title] + learning_notes.get(item["name"], []), f"concept:{item['name']}"))
+    for item in category_results.values():
+        content = get_block_kramdown(client, item["id"])
+        validation_errors.extend(validate_page(content, ["## 知识点"], f"category:{item['category']}"))
     for item in review_results:
         content = export_doc(client, item["id"])
         validation_errors.extend(validate_page(content, [title], f"review:{item['label']}"))
+    for name, item in homepage_results["sections"].items():
+        if name == "Codex 同步日志":
+            continue
+        content = get_block_kramdown(client, item["id"])
+        validation_errors.extend(validate_page(content, [], f"homepage:{name}"))
+        if len(content.strip()) < 40:
+            validation_errors.append(f"homepage:{name}: unexpectedly empty")
+    root_home = get_block_kramdown(client, homepage_results["root"]["id"])
+    validation_errors.extend(validate_page(root_home, [], "homepage:root"))
+    if len(root_home.strip()) < 40:
+        validation_errors.append("homepage:root: unexpectedly empty")
     if validation_errors:
         raise SiyuanError("SiYuan validation failed: " + "; ".join(validation_errors))
 
@@ -385,7 +895,9 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         "enabled": True,
         "problem": {"title": title, "id": problem_id, "hPath": problem_hpath, "url": f"siyuan://blocks/{problem_id}", "created": problem_created},
         "concepts": concept_results,
+        "categories": list(category_results.values()),
         "reviews": review_results,
+        "homepages": homepage_results,
         "auditLog": {"id": audit_id, "hPath": audit_hpath, "url": f"siyuan://blocks/{audit_id}", "created": audit_created},
         "validation": "passed",
         "resolvedUrl": resolved.get("url"),
