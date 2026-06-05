@@ -66,12 +66,13 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make low-level SiYuan API code depend on LeetCode note policy. Use finish flow only as the orchestrator.
 - Do not call or depend on the removed scaffold skill. Its scripts have been migrated into this skill.
 - Never edit SiYuan `.sy` files directly. Use official HTTP APIs only.
-- Never write Chinese or emoji-rich SiYuan page bodies through ad hoc PowerShell string concatenation. Use the UTF-8 Python API layer and ASCII temp file paths.
+- Never construct Chinese SiYuan payloads through ad hoc PowerShell string concatenation, here-strings, pipelines, inline `python -` snippets containing Chinese literals, or host-decoded Git output. Use UTF-8 Python/JSON files at ASCII temp paths, then pass only file paths to scripts.
 - SiYuan user-visible pages must not contain `<!-- codex-* -->` markers. Those markers may remain in repository Markdown only.
 - The new SiYuan target structure is authoritative: `算法题/面试手撕训练系统`. Legacy pages may be migrated into it, but new writes must not create new knowledge pages under the old `按数据结构分类` / `按方法分类` layout.
 - Stop before writing to SiYuan if a title, HPath, concept name, review label, or tag appears corrupted, including any ASCII `?`, Unicode replacement characters, or visible mojibake detected by the sync script. Do not create pages such as `??` or `M200-????`.
 - SiYuan review pages must stay signal-only: create review label pages only when a real problem is linked. Audit logs must be newest-first and retain only the last 7 days.
 - SiYuan concept pages must never be filled with generic template prose. If a new tag lacks local concept knowledge, search reputable open references when available and pass structured `conceptKnowledge`; otherwise stop before creating the page.
+- Treat commit hash as the authoritative Git identifier for SiYuan sync. If the current branch name contains Chinese or is returned as mojibake on Windows, omit it from the payload or use an ASCII-safe display value; do not write corrupted branch names.
 - One-time migration from legacy SiYuan pages is handled by `leetcode-siyuan-migrator`, dry-run first and non-destructive by default.
 - Before editing repository files, inspect the target files and current `git status --short --branch`.
 - Preserve unrelated user changes. Stage only files explicitly relevant to the current problem or skill iteration.

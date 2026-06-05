@@ -30,6 +30,8 @@ Validate every touched user-facing page through `/api/block/getBlockKramdown`, s
 
 `/api/block/getBlockKramdown` includes SiYuan Kramdown block attributes like `{: id="..." updated="..."}`. Strip those attributes before judging visible content length or presenting a preview to the user.
 
+SiYuan may insert zero-width inline markers around inline code when returning kramdown. Required-text checks must normalize current-block kramdown by removing zero-width characters, block attributes, native block-reference wrappers, and Markdown emphasis/code delimiters before substring matching. Do not require the problem document's current block to contain the HPath title, because SiYuan may store the document title outside the editable block body.
+
 ## Failure Policy
 
 - If validation fails before Git commit, stop.
@@ -46,3 +48,5 @@ json.dumps(payload, ensure_ascii=False).encode("utf-8")
 ```
 
 PowerShell may launch scripts and pass ASCII paths, but it must not construct Chinese page bodies.
+
+Before any write, scan the full sync payload, not only page titles and HPaths. Reject body fields, digest fields, readiness fields, and concept knowledge containing `????`, `�`, or visible mojibake. Plain English question marks in explanatory body text are allowed; question marks in titles, labels, tags, concepts, and HPaths are not.

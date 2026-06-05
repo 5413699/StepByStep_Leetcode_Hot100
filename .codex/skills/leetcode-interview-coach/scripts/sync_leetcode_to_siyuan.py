@@ -71,6 +71,7 @@ CORRUPTION_MARKERS = list(
     )
 )
 CONTENT_CORRUPTION_MARKERS = [marker for marker in CORRUPTION_MARKERS if marker != "?"]
+SIYUAN_INLINE_MARKERS = "\u200b\u200c\u200d\ufeff"
 GENERIC_CONCEPT_PHRASES = [
     "高频知识点",
     "需要结合题目特征",
@@ -519,6 +520,35 @@ def is_probably_corrupted_text(text: str) -> bool:
     return False
 
 
+def is_probably_corrupted_body(text: str) -> bool:
+    if not text:
+        return False
+    if "????" in text or "\ufffd" in text:
+        return True
+    for marker in CONTENT_CORRUPTION_MARKERS:
+        if marker and marker in text:
+            return True
+    if re.search(r"(?<!\w)\?{2,}(?!\w)", text):
+        return True
+    return False
+
+
+def is_git_ref_text(text: str) -> bool:
+    return bool(text) and bool(re.fullmatch(r"[0-9A-Za-z._/\-]+", text))
+
+
+def sanitized_git(payload: dict[str, Any]) -> dict[str, str]:
+    raw = payload.get("git") or {}
+    branch = as_text(raw.get("branch"))
+    commit = as_text(raw.get("commit"))
+    result: dict[str, str] = {}
+    if branch and not is_probably_corrupted_text(branch) and is_git_ref_text(branch):
+        result["branch"] = branch
+    if commit and not is_probably_corrupted_text(commit):
+        result["commit"] = commit
+    return result
+
+
 def collect_named_strings(value: Any, path: str = "$") -> list[tuple[str, str]]:
     result: list[tuple[str, str]] = []
     if isinstance(value, dict):
@@ -534,6 +564,19 @@ def collect_named_strings(value: Any, path: str = "$") -> list[tuple[str, str]]:
     return result
 
 
+def collect_payload_strings(value: Any, path: str = "$") -> list[tuple[str, str]]:
+    result: list[tuple[str, str]] = []
+    if isinstance(value, str):
+        result.append((path, value))
+    elif isinstance(value, dict):
+        for key, child in value.items():
+            result.extend(collect_payload_strings(child, f"{path}.{key}"))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            result.extend(collect_payload_strings(child, f"{path}[{index}]"))
+    return result
+
+
 def validate_sync_text_inputs(payload: dict[str, Any], root: str, plan: dict[str, Any]) -> None:
     candidates: list[tuple[str, str]] = [("wikiPolicy.systemRootHPath", root)]
     candidates.extend(collect_named_strings(payload))
@@ -545,6 +588,26 @@ def validate_sync_text_inputs(payload: dict[str, Any], root: str, plan: dict[str
             "检测到疑似编码损坏的标题、标签或路径，已停止写入思源，避免创建 ??/???? 页面："
             + details
         )
+    body_candidates: list[tuple[str, str]] = []
+    body_candidates.extend(collect_payload_strings(payload.get("statementMarkdown"), "$.statementMarkdown"))
+    body_candidates.extend(collect_payload_strings(payload.get("thinkingMarkdown"), "$.thinkingMarkdown"))
+    body_candidates.extend(collect_payload_strings(payload.get("firstReactionMarkdown"), "$.firstReactionMarkdown"))
+    body_candidates.extend(collect_payload_strings(payload.get("breakthroughMarkdown"), "$.breakthroughMarkdown"))
+    body_candidates.extend(collect_payload_strings(payload.get("interviewExpressionMarkdown"), "$.interviewExpressionMarkdown"))
+    body_candidates.extend(collect_payload_strings(payload.get("processMarkdown"), "$.processMarkdown"))
+    body_candidates.extend(collect_payload_strings(payload.get("complexityMarkdown"), "$.complexityMarkdown"))
+    body_candidates.extend(collect_payload_strings(payload.get("pitfalls"), "$.pitfalls"))
+    body_candidates.extend(collect_payload_strings(payload.get("readiness"), "$.readiness"))
+    body_candidates.extend(collect_payload_strings(payload.get("conversationDigest"), "$.conversationDigest"))
+    body_candidates.extend(collect_payload_strings(payload.get("conceptKnowledge"), "$.conceptKnowledge"))
+    body_bad = [(path, text) for path, text in body_candidates if is_probably_corrupted_body(text)]
+    if body_bad:
+        details = "; ".join(f"{path}={text!r}" for path, text in body_bad[:12])
+        raise SiyuanError("检测到疑似编码损坏的正文内容，已停止写入思源：" + details)
+
+    rendered_problem = render_problem(payload, {})
+    if is_probably_corrupted_body(rendered_problem):
+        raise SiyuanError("检测到疑似编码损坏的题目页渲染结果，已停止写入思源。")
 
 
 def problem_ref(problem_id: str, title: str) -> str:
@@ -839,7 +902,7 @@ def update_homepages(
 
 def render_problem(payload: dict[str, Any], concept_refs: dict[str, str]) -> str:
     title = payload["problemTitle"]
-    git = payload.get("git") or {}
+    git = sanitized_git(payload)
     ready = readiness(payload)
     status = as_list(ready.get("status"))
     digest = conversation_digest(payload)
@@ -959,8 +1022,19 @@ def save_state(state: dict[str, Any]) -> None:
     STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def comparable_markdown(text: str) -> str:
+    text = text or ""
+    text = re.sub(f"[{SIYUAN_INLINE_MARKERS}]", "", text)
+    text = re.sub(r"\(\([0-9a-z-]+\s+\"([^\"]+)\"\)\)", r"\1", text)
+    text = re.sub(r"\{:\s+[^}]*\}", "", text)
+    text = re.sub(r"[`*_~]", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
 def validate_page(content: str, required: list[str], title: str) -> list[str]:
     errors: list[str] = []
+    comparable_content = comparable_markdown(content)
     if re.search(r"(?m)^(title|date|lastmod):\s*", content):
         errors.append(f"{title}: contains leaked frontmatter metadata")
     if re.search(r"\[\^\d+\]", content):
@@ -982,7 +1056,7 @@ def validate_page(content: str, required: list[str], title: str) -> list[str]:
         if marker in content:
             errors.append(f"{title}: contains forbidden marker {marker}")
     for item in required:
-        if item and item not in content:
+        if item and comparable_markdown(item) not in comparable_content:
             errors.append(f"{title}: missing {item}")
     return errors
 
@@ -1057,7 +1131,8 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
             "created": category_created,
         }
 
-    update_doc(client, problem_id, render_problem(payload, concept_refs))
+    problem_markdown = render_problem(payload, concept_refs)
+    update_doc(client, problem_id, problem_markdown)
 
     review_results = []
     for label, hpath in review_targets:
@@ -1070,12 +1145,13 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         review_results.append({"label": label, "id": rid, "url": f"siyuan://blocks/{rid}", "created": created})
 
     audit_id, audit_created = ensure_doc(client, notebook, audit_hpath, "# Codex 同步日志\n")
+    git = sanitized_git(payload)
     audit_entry = "\n".join(
         [
             f"## {datetime.now().strftime('%Y-%m-%d %H:%M')} {title}",
             "",
             f"- 题目页：{page_link(problem_id, title)}",
-            f"- Git：{(payload.get('git') or {}).get('branch', '未提供')} / {(payload.get('git') or {}).get('commit', '未提供')}",
+            f"- Git：{git.get('branch', '未提供')} / {git.get('commit', '未提供')}",
             f"- 知识点：{'、'.join(item['name'] for item in concept_results) or '无'}",
             f"- 掌握状态：{'、'.join(label for label, _ in review_targets) or '未评估'}",
             f"- 当前题目对话摘要：{'已写入' if digest_has_content(digest) else '未提供'}",
@@ -1116,7 +1192,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     validation_errors.extend(
         validate_page(
             problem_content,
-            [title, "面试版思路", "最终题解", "掌握状态", (payload.get("git") or {}).get("commit", "")] + digest_required,
+            ["面试版思路", "最终题解", "掌握状态", sanitized_git(payload).get("commit", "")] + digest_required,
             "problem",
         )
     )
@@ -1156,7 +1232,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         "problemBlockId": problem_id,
         "conceptBlockIds": {item["name"]: item["id"] for item in concept_results},
         "reviewBlockIds": {item["label"]: item["id"] for item in review_results},
-        "lastCommit": (payload.get("git") or {}).get("commit", ""),
+        "lastCommit": sanitized_git(payload).get("commit", ""),
         "lastSyncAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
     save_state(state)
