@@ -43,7 +43,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 
 - **Validate SiYuan sync**: read `references/siyuan-sync-validation.md`.
   - Use after any SiYuan write.
-  - Output: exported-content checks for Chinese integrity, missing sections, duplicate links, and visible machine markers.
+  - Output: current-block kramdown checks for Chinese integrity, missing sections, duplicate links, and visible machine markers.
 
 - **Plan review schedule**: read `references/review-schedule-flow.md`.
   - Triggers: "二刷", "复习", "下次什么时候看", finish flow after readiness assessment.
@@ -64,7 +64,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 
 - Prefer Chinese responses in this repository.
 - Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make low-level SiYuan API code depend on LeetCode note policy. Use finish flow only as the orchestrator.
-- Do not call or depend on the removed scaffold skill. Its scripts have been migrated into this skill.
+- Use this skill's bundled scripts directly; do not route through legacy scaffold tooling.
 - Never edit SiYuan `.sy` files directly. Use official HTTP APIs only.
 - Never construct Chinese SiYuan payloads through ad hoc PowerShell string concatenation, here-strings, pipelines, inline `python -` snippets containing Chinese literals, or host-decoded Git output. Use UTF-8 Python/JSON files at ASCII temp paths, then pass only file paths to scripts.
 - SiYuan user-visible pages must not contain `<!-- codex-* -->` markers. Those markers may remain in repository Markdown only.
