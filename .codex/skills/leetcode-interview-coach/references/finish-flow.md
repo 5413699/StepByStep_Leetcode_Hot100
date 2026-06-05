@@ -10,6 +10,7 @@ Use this flow when the user has a final answer and wants repository completion. 
 - User's final Java solution.
 - User's thinking and complexity.
 - Optional tag plan JSON.
+  - May include `conceptKnowledge` for confirmed tags not present in the local concept knowledge map.
 - Optional readiness JSON.
 - Optional current-problem conversation digest JSON.
 - Optional SiYuan sync payload JSON.
@@ -21,6 +22,7 @@ Use this flow when the user has a final answer and wants repository completion. 
 3. Replace only the marked `// region LeetCode solution` region using `scripts/replace_solution_region.ps1`.
 4. Update only the Codex-marked area in the project Markdown note when a note update is needed.
 5. Generate a tag plan using `tag-rules.md`.
+   - If a confirmed tag lacks local concept knowledge, use `concept-knowledge-flow.md` to search reputable open references and add `conceptKnowledge` to the tag plan.
 6. Generate a current-problem conversation digest using `conversation-digest-schema.md`.
    - Include only the current problem's training process from the latest scaffold/coaching request to closeout.
    - Exclude previous problems, skill iteration, migration, SiYuan API troubleshooting, Git/environment work, and unrelated chat.

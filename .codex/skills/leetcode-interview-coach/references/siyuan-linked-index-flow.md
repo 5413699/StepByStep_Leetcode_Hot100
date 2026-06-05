@@ -25,6 +25,7 @@ The flow consumes:
 - concept update notes from the current-problem conversation digest
 
 Only confirmed tags with evidence should be written. Suggested or low-confidence tags must not create concept pages.
+Confirmed tags also need concept knowledge. If a concept is missing from the local knowledge map, the sync payload must include `conceptKnowledge` generated from reputable local or open-web references.
 
 ## Required Writes
 
@@ -41,6 +42,7 @@ For each confirmed concept tag:
    - `## 常见代码结构`
    - `## 高频易错点`
    - `## 题集`
+   - `## 来源依据`
 3. Add exactly one problem block reference under the concept page `## 题集`.
 4. Add current-problem learning notes under `## 来自题目的理解` when provided.
 5. Ensure the parent category page contains `## 知识点` and exactly one block reference to the concept page.
@@ -63,6 +65,7 @@ After writes, validate current block Markdown from `/api/block/getBlockKramdown`
 - knowledge home contains every touched category name and concept name
 - root home, problem index, review home, and expression home contain the problem title when touched
 - no user-facing page contains `title:`, `date:`, `lastmod:`, `[^1]`, `<!-- codex-`, or literal HTML anchors
+- newly created concept pages do not contain generic filler phrases listed in `concept-knowledge-flow.md`
 
 `/api/export/exportMdContent` must not be used as a write-back or validation source for linked index pages, because it can expand SiYuan block references into Markdown footnotes and child document content.
 

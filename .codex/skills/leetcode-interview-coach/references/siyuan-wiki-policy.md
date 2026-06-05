@@ -64,7 +64,10 @@ When creating a concept page, include:
 - 什么时候想到它
 - 常见代码结构
 - 高频易错点
+- 来源依据
 - 题集
+
+The content must come from local concept knowledge or structured `conceptKnowledge` generated from reputable sources. Do not create a concept page from generic placeholder wording.
 
 When updating an existing concept page:
 

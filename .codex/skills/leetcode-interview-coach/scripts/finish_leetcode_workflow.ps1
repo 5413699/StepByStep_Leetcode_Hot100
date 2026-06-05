@@ -115,6 +115,7 @@ if (-not $SkipSiyuan) {
             pitfalls = $Pitfalls
             tags = $(if ($tagPlan -and $tagPlan.tags) { $tagPlan.tags } else { @{} })
             tagEvidence = $(if ($tagPlan -and $tagPlan.tagEvidence) { $tagPlan.tagEvidence } else { @{} })
+            conceptKnowledge = $(if ($tagPlan -and $tagPlan.conceptKnowledge) { $tagPlan.conceptKnowledge } else { @{} })
             readiness = $(if ($ReadinessJson) { Get-Content -LiteralPath $ReadinessJson -Raw -Encoding UTF8 | ConvertFrom-Json } else { @{} })
             conversationDigest = $(if ($conversationDigest) { $conversationDigest } else { @{} })
             git = @{

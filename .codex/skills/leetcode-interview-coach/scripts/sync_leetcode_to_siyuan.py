@@ -71,6 +71,15 @@ CORRUPTION_MARKERS = list(
     )
 )
 CONTENT_CORRUPTION_MARKERS = [marker for marker in CORRUPTION_MARKERS if marker != "?"]
+GENERIC_CONCEPT_PHRASES = [
+    "高频知识点",
+    "需要结合题目特征",
+    "题目特征稳定指向该知识点",
+    "代码中明确使用该方法或结构",
+    "结合具体题型补充模板",
+    "只记结论不理解适用条件",
+    "模板细节和边界条件容易写错",
+]
 
 TAG_ALIASES = {
     "commonFunctions": {
@@ -92,76 +101,205 @@ CONCEPT_INTROS = {
         "intro": "DFS 是一种沿着一个方向尽可能深入搜索的遍历方法，常用于树、图、矩阵连通块、路径枚举等问题。",
         "signals": ["题目要求从一个起点扩展", "要搜索连通区域", "要遍历树或图", "要枚举路径"],
         "pitfalls": ["递归出口写晚导致越界", "忘记 visited 或原地标记", "需要回溯时没有撤销状态"],
+        "template": ["private void dfs(...) {", "    if (越界或状态非法) return;", "    标记当前状态;", "    dfs(下一个状态);", "}"],
     },
     "BFS": {
         "intro": "BFS 是按层向外扩展的遍历方法，常用于最短步数、层序遍历和状态扩散问题。",
         "signals": ["题目要求最短路径或最少步数", "需要按层处理", "可以用队列扩展状态"],
         "pitfalls": ["入队时不标记导致重复入队", "层数计数位置错误", "队列为空时仍 poll"],
+        "template": ["Queue<Node> queue = new LinkedList<>();", "while (!queue.isEmpty()) {", "    int size = queue.size();", "    // 处理当前层", "}"],
     },
     "多源 BFS": {
         "intro": "多源 BFS 是把多个初始状态同时加入队列，从这些起点同步按层向外扩散，常用于最短时间、状态传播和多起点最短距离问题。",
         "signals": ["题目存在多个初始起点", "每一轮所有起点同时扩散", "要求最少分钟数、最短距离或最早到达时间"],
         "pitfalls": ["只从一个起点开始导致答案偏大", "没有固定当前层 size，导致同一轮和下一轮混在一起", "新增状态入队前没有立即标记，导致重复入队"],
+        "template": ["Queue<int[]> queue = new LinkedList<>();", "// 所有初始源点同时入队", "while (!queue.isEmpty()) {", "    int size = queue.size();", "    // 当前层代表同一轮扩散", "}"],
     },
     "动态规划": {
         "intro": "动态规划通过定义状态和状态转移，复用子问题结果解决最优值、计数和可行性问题。",
         "signals": ["存在重叠子问题", "当前结果依赖之前结果", "题目要求最大/最小/方案数"],
         "pitfalls": ["状态定义不清", "初始化错误", "遍历顺序与转移依赖冲突"],
+        "template": ["// 1. 定义 dp[i] 的含义", "// 2. 写出状态转移", "// 3. 初始化边界", "for (...) {", "    dp[i] = ...;", "}"],
     },
     "矩阵": {
         "intro": "矩阵题通常需要处理二维坐标、边界、方向数组、原地标记或行列关系。",
         "signals": ["输入是二维数组或网格", "需要上下左右移动", "需要处理行列边界"],
         "pitfalls": ["行列下标写反", "边界判断遗漏", "修改原矩阵前没有确认是否允许"],
+        "template": ["int m = grid.length;", "int n = grid[0].length;", "for (int i = 0; i < m; i++) {", "    for (int j = 0; j < n; j++) { ... }", "}"],
     },
     "图论": {
         "intro": "图论题关注节点与边的关系，常见任务包括遍历、连通块、最短路、拓扑序和并查集。",
         "signals": ["元素之间存在连接关系", "题目出现路径、连通、依赖或网络", "矩阵格子可抽象成节点"],
         "pitfalls": ["没有 visited 导致重复访问", "有向/无向关系判断错误", "边界状态没有建模清楚"],
+        "template": ["// 明确节点、边、起点和访问状态", "for (Node next : graph[cur]) {", "    if (!visited[next]) { ... }", "}"],
     },
     "Flood Fill": {
         "intro": "Flood Fill 从一个种子位置出发，把同一连通区域全部访问或改色，常见于岛屿、染色和区域填充问题。",
         "signals": ["从一个格子扩散到同类格子", "需要把一整片区域标记掉", "题目强调上下左右相邻"],
         "pitfalls": ["先判断边界再访问 grid", "标记要发生在继续递归前", "字符矩阵要使用 `'1'`、`'0'`"],
+        "template": ["if (越界 || grid[i][j] != 目标状态) return;", "grid[i][j] = 已访问状态;", "dfs(i + 1, j);", "dfs(i - 1, j);"],
     },
     "网格搜索": {
         "intro": "网格搜索把二维数组中的格子看成状态，核心是坐标、边界判断和方向数组。",
         "signals": ["输入是二维数组或矩阵", "需要上下左右移动", "要遍历每个格子寻找搜索起点"],
         "pitfalls": ["行列下标写反", "边界条件遗漏 `i < 0` 或 `i >= m`", "原地修改前没有确认题目允许"],
+        "template": ["int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};", "for (int[] d : dirs) {", "    int ni = i + d[0];", "    int nj = j + d[1];", "}"],
     },
     "连通块": {
         "intro": "连通块表示通过相邻关系连成的一组节点，常见任务是统计块数、面积或判断连通性。",
         "signals": ["发现一个未访问节点就代表一个新区域", "同一块中的节点能通过相邻关系互相到达", "需要整块标记避免重复计数"],
         "pitfalls": ["在块内每个节点都计数导致重复", "visited 标记不完整", "方向关系和题目定义不一致"],
+        "template": ["if (发现未访问节点) {", "    count++;", "    dfs/bfs 标记整个连通块;", "}"],
     },
     "二叉树": {
         "intro": "二叉树题通常把问题拆成当前节点、左子树、右子树，用递归或层序遍历组合答案。",
         "signals": ["题目给出 TreeNode", "答案依赖左右子树结果", "可以把整棵树问题缩小到某个子树"],
         "pitfalls": ["空节点返回值和题意不匹配", "递归返回值与全局答案混淆", "路径类题目误把左右两边都返回给父节点"],
+        "template": ["if (root == null) return ...;", "left = dfs(root.left);", "right = dfs(root.right);", "// 用当前节点合并左右子树结果"],
     },
     "递归法": {
         "intro": "递归法把大问题拆成同结构的小问题，重点是函数语义、终止条件、参数和返回值。",
         "signals": ["当前问题可以交给子问题先解决", "树、链表、区间天然可递归", "需要从子结构返回信息给父结构"],
         "pitfalls": ["辅助函数参数缺少递归状态", "终止条件不覆盖空结构", "只照抄主函数入参导致表达力不足"],
+        "template": ["private Type helper(Node node, State state) {", "    if (node == null) return base;", "    // 处理当前节点并递归子问题", "}"],
     },
     "数组": {
         "intro": "数组题围绕下标、区间、顺序和原地修改展开，常与双指针、二分、滑动窗口配合。",
         "signals": ["输入是 int[] 或顺序列表", "需要按下标遍历、交换或统计", "题目强调有序数组"],
         "pitfalls": ["区间开闭不统一", "空数组和单元素边界遗漏", "修改数组前未确认是否允许"],
+        "template": ["for (int i = 0; i < nums.length; i++) {", "    // 明确 i 表示当前位置还是区间边界", "}"],
     },
     "可变数组": {
         "intro": "可变数组通常对应 ArrayList，适合动态收集遍历结果、层结果或不定长答案。",
         "signals": ["返回 List 或 List<List<...>>", "结果数量不固定", "需要按顺序追加答案"],
         "pitfalls": ["复用同一个临时列表导致结果被后续修改", "泛型类型不完整", "每层结果没有单独创建"],
+        "template": ["List<Integer> ans = new ArrayList<>();", "ans.add(value);", "return ans;"],
     },
     "哈希映射": {
         "intro": "哈希映射用 key 快速定位 value，适合计数、索引映射、前缀和统计和缓存状态。",
         "signals": ["需要 O(1) 查询是否出现过", "需要记录出现次数或下标", "暴力查找中存在重复扫描"],
         "pitfalls": ["默认值语义错误", "key 类型没有防溢出", "回溯场景离开节点没有撤销计数"],
+        "template": ["Map<Key, Integer> map = new HashMap<>();", "map.put(key, map.getOrDefault(key, 0) + 1);", "int count = map.getOrDefault(key, 0);"],
     },
     "队列": {
         "intro": "队列先进先出，常用于 BFS、层序遍历和按到达顺序处理状态。",
         "signals": ["需要按层访问节点", "状态从起点一圈圈扩散", "每次处理最早加入的元素"],
         "pitfalls": ["循环条件写成 queue != null", "层序遍历没有固定当前层 size", "空节点直接入队"],
+        "template": ["Queue<Node> queue = new LinkedList<>();", "queue.offer(start);", "Node cur = queue.poll();"],
+    },
+    "前缀和": {
+        "intro": "前缀和把区间和转换成两个前缀状态的差，适合快速统计连续区间、路径前缀或子数组和。",
+        "signals": ["题目反复询问一段连续区间的和", "需要统计和为 target 的子数组或路径", "当前状态可由之前累计值推出"],
+        "pitfalls": ["忘记初始化前缀和 0", "哈希表记录的是出现次数而不是单个下标", "整数范围可能需要 long"],
+        "template": ["long prefix = 0;", "map.put(0L, 1);", "prefix += value;", "ans += map.getOrDefault(prefix - target, 0);"],
+    },
+    "中序遍历": {
+        "intro": "中序遍历按左子树、当前节点、右子树访问二叉树，在二叉搜索树中天然得到升序序列。",
+        "signals": ["题目涉及 BST 的有序性", "需要第 k 小、合法性判断或升序输出", "当前节点必须在左子树之后、右子树之前处理"],
+        "pitfalls": ["把普通二叉树误当 BST", "递归提前停止时没有共享计数状态", "边界值比较用 int 导致溢出"],
+        "template": ["inorder(root.left);", "// 处理 root", "inorder(root.right);"],
+    },
+    "后序递归": {
+        "intro": "后序递归先拿到左右子问题结果，再在当前节点合并，适合树的高度、直径、最大路径和等自底向上的题。",
+        "signals": ["当前节点答案依赖左右子树返回值", "需要向父节点返回贡献或状态", "全局答案可能在任意子树内更新"],
+        "pitfalls": ["混淆返回给父节点的值和全局答案", "空节点返回值没有和题意对齐", "把左右两边同时返回给父节点形成分叉"],
+        "template": ["int left = dfs(root.left);", "int right = dfs(root.right);", "更新当前节点答案;", "return 给父节点的单侧状态;"],
+    },
+    "最近公共祖先": {
+        "intro": "最近公共祖先题的核心是让递归返回“当前子树里找到的目标节点或已确定的祖先”，再根据左右子树返回值合并。",
+        "signals": ["题目要求两个节点的最低共同祖先", "节点本身也可以是自己的祖先", "p、q 保证存在于树中"],
+        "pitfalls": ["忘记 root == p 或 root == q 时直接返回", "误以为 p 和 q 必须分居左右两侧", "没有理解返回值可能是目标节点也可能是答案"],
+        "template": ["if (root == null || root == p || root == q) return root;", "TreeNode left = dfs(root.left);", "TreeNode right = dfs(root.right);", "if (left != null && right != null) return root;"],
+    },
+    "双指针": {
+        "intro": "双指针用两个位置共同维护搜索范围或关系，常用于有序数组、链表快慢指针、原地去重和左右夹逼。",
+        "signals": ["需要同时关注区间两端", "数组有序且要找两数关系", "链表需要快慢速度差"],
+        "pitfalls": ["指针移动条件不单调", "循环边界 `left < right` 和 `left <= right` 混用", "更新答案后忘记移动指针"],
+        "template": ["int left = 0, right = nums.length - 1;", "while (left < right) {", "    if (需要变大) left++; else right--;", "}"],
+    },
+    "滑动窗口": {
+        "intro": "滑动窗口用左右边界维护一个连续区间，右边界扩张收集信息，左边界收缩恢复约束。",
+        "signals": ["题目要求连续子数组或子串", "窗口内状态可增量维护", "约束满足后可以移动左边界"],
+        "pitfalls": ["窗口条件收缩时机错误", "计数 map 增减不对称", "把非连续问题误套滑动窗口"],
+        "template": ["for (int right = 0; right < n; right++) {", "    加入 nums[right];", "    while (窗口不合法) 移出 nums[left++];", "}"],
+    },
+    "二分查找": {
+        "intro": "二分查找利用单调性不断排除一半候选区间，既可查找有序数组，也可在答案空间上搜索最小可行值。",
+        "signals": ["搜索范围有序或答案具有单调可行性", "要求 O(log n)", "问最小满足条件或最大满足条件"],
+        "pitfalls": ["区间开闭不统一", "mid 计算溢出", "可行性判断方向写反"],
+        "template": ["int left = 0, right = n - 1;", "while (left <= right) {", "    int mid = left + (right - left) / 2;", "    // 根据单调性收缩区间", "}"],
+    },
+    "贪心": {
+        "intro": "贪心每一步选择局部最优，并依赖问题结构保证这些局部选择能组成全局最优。",
+        "signals": ["题目可按排序后逐步决策", "局部选择不会破坏未来最优性", "可以用交换论证或反证说明正确性"],
+        "pitfalls": ["只有直觉没有证明", "排序关键字选错", "局部最优不等于全局最优"],
+        "template": ["Arrays.sort(items, comparator);", "for (Item item : items) {", "    if (可以选择) 更新答案;", "}"],
+    },
+    "回溯": {
+        "intro": "回溯是在决策树上尝试选择、递归深入、撤销选择，适合排列组合、子集、棋盘放置和约束搜索。",
+        "signals": ["需要枚举所有可行方案", "每一步有多个选择", "选择后需要恢复现场尝试下一种可能"],
+        "pitfalls": ["忘记撤销选择", "剪枝条件写错导致漏解", "把路径对象直接加入答案后又被修改"],
+        "template": ["path.add(choice);", "backtrack(next);", "path.remove(path.size() - 1);"],
+    },
+    "字符串": {
+        "intro": "字符串题关注字符顺序、子串、匹配和频次状态，常与双指针、滑动窗口、哈希计数配合。",
+        "signals": ["输入是 String 或 char[]", "需要处理子串、回文、匹配或字符频次", "答案依赖连续字符区间"],
+        "pitfalls": ["charAt 下标越界", "子串边界左闭右开混淆", "Unicode 与普通 ASCII 字符假设不一致"],
+        "template": ["for (int i = 0; i < s.length(); i++) {", "    char c = s.charAt(i);", "}"],
+    },
+    "栈": {
+        "intro": "栈后进先出，适合处理最近未匹配元素、括号匹配、单调栈和递归过程的显式模拟。",
+        "signals": ["需要和最近的前一个元素配对", "括号或路径需要撤销最近状态", "要维护单调递增或递减结构"],
+        "pitfalls": ["空栈时 peek/pop", "入栈的是值还是下标不清楚", "单调栈弹出条件方向写反"],
+        "template": ["Deque<Integer> stack = new ArrayDeque<>();", "while (!stack.isEmpty() && 条件) stack.pop();", "stack.push(i);"],
+    },
+    "链表": {
+        "intro": "链表题围绕指针重连和节点身份展开，重点是 dummy 节点、前驱节点和断链顺序。",
+        "signals": ["题目给出 ListNode", "需要删除、反转、合并或找环", "不能随机访问，只能沿 next 前进"],
+        "pitfalls": ["丢失 next 指针", "返回头节点错误", "没有 dummy 导致头节点特殊处理复杂"],
+        "template": ["ListNode dummy = new ListNode(0);", "dummy.next = head;", "ListNode prev = dummy;"],
+    },
+    "双向链表": {
+        "intro": "双向链表让节点能 O(1) 从当前位置摘除或插入到头尾，常与哈希表组合实现 LRU 等缓存结构。",
+        "signals": ["需要 O(1) 删除任意已知节点", "需要维护最近/最久顺序", "节点要同时知道前驱和后继"],
+        "pitfalls": ["忘记同时更新 prev 和 next", "头尾哨兵节点连接错误", "哈希表与链表节点状态不同步"],
+        "template": ["node.prev.next = node.next;", "node.next.prev = node.prev;", "// insert after head"],
+    },
+    "LRU": {
+        "intro": "LRU 缓存用哈希表定位节点，用双向链表维护最近使用顺序，使 get 和 put 都能达到 O(1)。",
+        "signals": ["题目要求最近最少使用淘汰", "get/put 都要求 O(1)", "需要同时支持快速查找和顺序更新"],
+        "pitfalls": ["访问后忘记移动到最近端", "容量满时没有同时删除链表尾和 map 项", "更新已有 key 时重复创建节点"],
+        "template": ["Map<Integer, Node> map = new HashMap<>();", "// get/put 后 moveToHead(node)", "// 超容量 removeTail()"],
+    },
+    "数组Array的常用函数": {
+        "intro": "Java 数组是定长连续容器，面试中常配合 Arrays 工具类完成排序、填充、拷贝和字符串化调试。",
+        "signals": ["代码中使用 int[]、char[] 或二维数组", "需要排序、初始化默认值或复制区间", "需要输出数组内容辅助验证"],
+        "pitfalls": ["Arrays.copyOfRange 右边界是开区间", "二维数组 fill 不能一次填满所有行", "Arrays.asList 处理基本类型数组会得到单个元素"],
+        "template": ["Arrays.sort(nums);", "Arrays.fill(dp, INF);", "int[] part = Arrays.copyOfRange(nums, l, r);"],
+    },
+    "可变数组的常用函数": {
+        "intro": "ArrayList 适合保存数量不固定的结果，常用 add、get、set、remove 和 size 组合构造答案。",
+        "signals": ["返回 List", "结果需要动态追加", "需要按下标读取已收集结果"],
+        "pitfalls": ["remove(index) 和 remove(Object) 重载混淆", "遍历时删除导致下标跳过", "把临时 list 引用直接放入答案后继续修改"],
+        "template": ["List<Integer> list = new ArrayList<>();", "list.add(x);", "int last = list.get(list.size() - 1);"],
+    },
+    "哈希映射hashmap的常用函数": {
+        "intro": "HashMap 通过 key 做平均 O(1) 查找，面试中常用 getOrDefault、put、containsKey 和 remove 维护计数或索引。",
+        "signals": ["需要记录频次、下标或映射关系", "暴力查找会重复扫描", "需要快速判断某个状态是否出现过"],
+        "pitfalls": ["get 返回 null 时直接拆箱", "计数减到 0 后没有按语义删除", "可变对象作为 key 导致哈希不稳定"],
+        "template": ["map.put(key, map.getOrDefault(key, 0) + 1);", "if (map.containsKey(key)) { ... }", "map.remove(key);"],
+    },
+    "队列Queue的常用函数": {
+        "intro": "Queue 接口常用于 BFS，推荐用 offer 入队、poll 出队、peek 查看队头，避免 add/remove 在失败时抛异常。",
+        "signals": ["代码需要先进先出处理", "BFS 层序扩展", "状态要按到达顺序处理"],
+        "pitfalls": ["poll 可能返回 null", "使用 queue.size() 时没有先固定层大小", "LinkedList 可存 null 但 BFS 队列不应放 null 状态"],
+        "template": ["Queue<int[]> queue = new LinkedList<>();", "queue.offer(new int[]{i, j});", "int[] cur = queue.poll();"],
+    },
+    "Collections的常用函数": {
+        "intro": "Collections 提供对 List 等集合的排序、反转、最大最小值和二分查找，适合处理对象集合而不是基本类型数组。",
+        "signals": ["数据已经放在 List 中", "需要按自定义规则排序", "需要反转或查找集合中的极值"],
+        "pitfalls": ["Collections.binarySearch 要求列表已按同一规则排序", "sort 会原地修改列表", "基本类型数组不能直接使用 Collections.sort"],
+        "template": ["Collections.sort(list);", "Collections.reverse(list);", "int idx = Collections.binarySearch(list, target);"],
     },
 }
 
@@ -305,6 +443,63 @@ def concept_update_notes(payload: dict[str, Any], tag_data: dict[str, list[str]]
         result.setdefault(concept, [])
         result[concept].append(item["note"])
     return {key: unique(value) for key, value in result.items()}
+
+
+def concept_knowledge(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    raw = payload.get("conceptKnowledge") or {}
+    result: dict[str, dict[str, Any]] = {}
+    if not isinstance(raw, dict):
+        return result
+    for name, data in raw.items():
+        if isinstance(data, dict):
+            result[as_text(name)] = data
+    return result
+
+
+def concept_preset(name: str, payload_knowledge: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    if name in CONCEPT_INTROS:
+        return CONCEPT_INTROS[name]
+    if payload_knowledge and name in payload_knowledge:
+        return payload_knowledge[name]
+    raise SiyuanError(
+        f"缺少知识点 `{name}` 的高质量介绍，已停止创建概念页。"
+        "请先基于本地知识库或网络开源资料生成 conceptKnowledge，包含 intro/signals/template/pitfalls/sources。"
+    )
+
+
+def validate_concept_preset(name: str, preset: dict[str, Any], *, require_sources: bool) -> None:
+    intro = as_text(preset.get("intro"))
+    signals = as_list(preset.get("signals"))
+    template = as_list(preset.get("template"))
+    pitfalls = as_list(preset.get("pitfalls"))
+    sources = preset.get("sources") or []
+    joined = "\n".join([intro, *signals, *template, *pitfalls])
+    missing = []
+    if len(intro) < 24:
+        missing.append("intro")
+    if len(signals) < 2:
+        missing.append("signals")
+    if not template:
+        missing.append("template")
+    if len(pitfalls) < 2:
+        missing.append("pitfalls")
+    if require_sources and not sources:
+        missing.append("sources")
+    if missing:
+        raise SiyuanError(f"知识点 `{name}` 的 conceptKnowledge 不完整，缺少或过短：{', '.join(missing)}")
+    corrupted = [text for text in [intro, *signals, *template, *pitfalls] if is_probably_corrupted_text(text)]
+    for item in sources:
+        if isinstance(item, dict):
+            corrupted.extend(as_text(item.get(key)) for key in ["label", "name", "title", "url", "note"] if is_probably_corrupted_text(as_text(item.get(key))))
+        else:
+            text = as_text(item)
+            if is_probably_corrupted_text(text):
+                corrupted.append(text)
+    if corrupted:
+        raise SiyuanError(f"知识点 `{name}` 的 conceptKnowledge 疑似编码损坏，已拒绝创建：{corrupted[0]!r}")
+    generic = [phrase for phrase in GENERIC_CONCEPT_PHRASES if phrase in joined]
+    if generic:
+        raise SiyuanError(f"知识点 `{name}` 的介绍含套话，已拒绝创建：{', '.join(generic)}")
 
 
 def is_probably_corrupted_text(text: str) -> bool:
@@ -454,22 +649,24 @@ def append_unique_learning_note(markdown: str, problem_id: str, title: str, note
     return append_unique_under_heading(markdown, "来自题目的理解", line, note)
 
 
-def concept_markdown(name: str, category: str, problem_id: str, title: str) -> str:
-    preset = CONCEPT_INTROS.get(name, {})
-    intro = preset.get("intro") or f"{name} 是面试手撕题中的一个高频知识点，需要结合题目特征、代码模板和易错点复习。"
-    signals = preset.get("signals") or ["题目特征稳定指向该知识点", "代码中明确使用该方法或结构"]
-    pitfalls = preset.get("pitfalls") or ["只记结论不理解适用条件", "模板细节和边界条件容易写错"]
-    templates = {
-        "DFS": ["private void dfs(...) {", "    if (越界或状态非法) return;", "    标记当前状态;", "    dfs(下一个状态);", "}"],
-        "BFS": ["Queue<Node> queue = new LinkedList<>();", "while (!queue.isEmpty()) {", "    int size = queue.size();", "    // 处理当前层", "}"],
-        "多源 BFS": ["Queue<int[]> queue = new LinkedList<>();", "// 所有初始源点同时入队", "while (!queue.isEmpty()) {", "    int size = queue.size();", "    // 当前层代表同一轮扩散", "}"],
-        "Flood Fill": ["if (越界 || grid[i][j] != 目标状态) return;", "grid[i][j] = 已访问状态;", "dfs(i + 1, j);"],
-        "网格搜索": ["int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};", "for (int[] d : dirs) { ... }"],
-        "连通块": ["if (发现未访问节点) {", "    count++;", "    dfs/bfs 标记整个连通块;", "}"],
-        "二叉树": ["if (root == null) return ...;", "left = dfs(root.left);", "right = dfs(root.right);"],
-        "递归法": ["private Type helper(Node node, State state) {", "    if (node == null) return base;", "}"],
-    }
-    template_lines = templates.get(name, ["// 结合具体题型补充模板"])
+def concept_markdown(name: str, category: str, problem_id: str, title: str, preset: dict[str, Any]) -> str:
+    intro = as_text(preset.get("intro"))
+    signals = as_list(preset.get("signals"))
+    pitfalls = as_list(preset.get("pitfalls"))
+    template_lines = as_list(preset.get("template"))
+    sources = []
+    for item in preset.get("sources") or []:
+        if isinstance(item, dict):
+            label = as_text(item.get("label") or item.get("name") or item.get("title"))
+            url = as_text(item.get("url"))
+            note = as_text(item.get("note"))
+            display = label or url or note
+            if display:
+                sources.append(f"- {display}" + (f"：{note}" if note and note != display else "") + (f" ({url})" if url and url != display else ""))
+        else:
+            text = as_text(item)
+            if text:
+                sources.append(f"- {text}")
     lines = [
         "## 简介",
         "",
@@ -489,13 +686,16 @@ def concept_markdown(name: str, category: str, problem_id: str, title: str) -> s
         "",
         *[f"- {item}" for item in pitfalls],
         "",
+        "## 来源依据",
+        "",
+        *(sources or ["- 本地 LeetCode Hot100 知识库"]),
+        "",
         "## 题集",
         "",
         f"- {problem_ref(problem_id, title)}",
         "",
         "## 来自题目的理解",
         "",
-        "- 暂无自动补充。",
     ]
     if category:
         lines.insert(2, f"分类：{category}")
@@ -774,6 +974,10 @@ def validate_page(content: str, required: list[str], title: str) -> list[str]:
             errors.append(f"{title}: contains mojibake marker {marker}")
     if "<!-- codex-" in content:
         errors.append(f"{title}: contains visible codex marker")
+    if title.startswith("concept:"):
+        generic = [phrase for phrase in GENERIC_CONCEPT_PHRASES if phrase in content]
+        if generic:
+            errors.append(f"{title}: contains generic concept filler {', '.join(generic)}")
     for marker in ["<a href=", "## 来源索引", "## 迁移记录", "## 旧笔记内容", "## 迁移补充", "## 旧笔记重组补充"]:
         if marker in content:
             errors.append(f"{title}: contains forbidden marker {marker}")
@@ -791,12 +995,16 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     payload = load_json(payload_path)
     root = (config.get("wikiPolicy") or {}).get("systemRootHPath", "/算法题/面试手撕训练系统")
     tag_data = tags(payload)
+    payload_knowledge = concept_knowledge(payload)
     ready = readiness(payload)
     title = payload["problemTitle"]
     problem_hpath = normalize_hpath(root, "题集", title)
     concept_targets = category_paths(root, tag_data)
     if not concept_targets:
         raise SiyuanError("缺少可写入的知识点标签，已停止同步。请先根据 tag-rules.md 生成带 evidence 的 tags。")
+    for _, name, _ in concept_targets:
+        preset = concept_preset(name, payload_knowledge)
+        validate_concept_preset(name, preset, require_sources=name not in CONCEPT_INTROS)
     review_targets = [(label, normalize_hpath(root, "错题与复习", label)) for label in as_list(ready.get("status"))]
     audit_hpath = normalize_hpath(root, "Codex 同步日志")
     digest = conversation_digest(payload)
@@ -824,9 +1032,11 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     concept_results = []
     category_results: dict[str, dict[str, Any]] = {}
     for category, name, hpath in concept_targets:
-        cid, created = ensure_doc(client, notebook, hpath, concept_markdown(name, category, problem_id, title))
+        preset = concept_preset(name, payload_knowledge)
+        initial_concept = concept_markdown(name, category, problem_id, title, preset)
+        cid, created = ensure_doc(client, notebook, hpath, initial_concept)
         concept_refs[name] = page_link(cid, name)
-        existing = concept_markdown(name, category, problem_id, title) if created else clean_linked_page_markdown(own_doc_markdown(client, cid))
+        existing = initial_concept if created else clean_linked_page_markdown(own_doc_markdown(client, cid))
         updated = append_unique_problem_link(existing, problem_id, title)
         for note in learning_notes.get(name, []):
             updated = append_unique_learning_note(updated, problem_id, title, note)

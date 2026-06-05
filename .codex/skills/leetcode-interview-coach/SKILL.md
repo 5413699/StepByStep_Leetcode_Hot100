@@ -52,6 +52,10 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - **Generate tags**: read `references/tag-rules.md`.
   - Use before SiYuan sync or whenever the user asks what data structure/method/pattern a problem belongs to.
 
+- **Generate concept knowledge**: read `references/concept-knowledge-flow.md`.
+  - Use when a confirmed tag is not already backed by local concept knowledge or when creating a new SiYuan concept page.
+  - Output: concrete `conceptKnowledge` with intro, recognition signals, code shape, pitfalls, and source evidence; never generic filler.
+
 - **Migrate legacy SiYuan notes**: use the separate `leetcode-siyuan-migrator` skill.
   - Triggers: "迁移旧笔记", "整理已有思源体系", "把旧分类迁到新系统".
   - This main skill must not perform batch migration during normal finish flow.
@@ -67,6 +71,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - The new SiYuan target structure is authoritative: `算法题/面试手撕训练系统`. Legacy pages may be migrated into it, but new writes must not create new knowledge pages under the old `按数据结构分类` / `按方法分类` layout.
 - Stop before writing to SiYuan if a title, HPath, concept name, review label, or tag appears corrupted, including any ASCII `?`, Unicode replacement characters, or visible mojibake detected by the sync script. Do not create pages such as `??` or `M200-????`.
 - SiYuan review pages must stay signal-only: create review label pages only when a real problem is linked. Audit logs must be newest-first and retain only the last 7 days.
+- SiYuan concept pages must never be filled with generic template prose. If a new tag lacks local concept knowledge, search reputable open references when available and pass structured `conceptKnowledge`; otherwise stop before creating the page.
 - One-time migration from legacy SiYuan pages is handled by `leetcode-siyuan-migrator`, dry-run first and non-destructive by default.
 - Before editing repository files, inspect the target files and current `git status --short --branch`.
 - Preserve unrelated user changes. Stage only files explicitly relevant to the current problem or skill iteration.
@@ -79,11 +84,12 @@ When the user reaches a final answer:
 2. Replace only the marked LeetCode solution region.
 3. Update only the intended repository note region.
 4. Generate a tag plan with evidence.
-5. Generate a current-problem conversation digest. Include only the interaction about this problem from scaffold/coaching to closeout; exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
-6. Generate an interview-readiness assessment and review labels.
-7. Run `mvn -q -DskipTests compile`.
-8. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
-9. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate current-block Markdown, and report failure without rolling back Git.
+5. Generate or verify concept knowledge for every confirmed tag. Use local knowledge first; if missing, search reputable open references when network is available and create structured `conceptKnowledge`.
+6. Generate a current-problem conversation digest. Include only the interaction about this problem from scaffold/coaching to closeout; exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
+7. Generate an interview-readiness assessment and review labels.
+8. Run `mvn -q -DskipTests compile`.
+9. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
+10. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate current-block Markdown, and report failure without rolling back Git.
 
 ## User-Facing Closeout
 

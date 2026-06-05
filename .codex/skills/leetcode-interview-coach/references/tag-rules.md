@@ -17,11 +17,14 @@ Use these rules to generate the tag plan consumed by SiYuan sync. This module is
   "tagEvidence": {
     "图论": "每个陆地格子可视为节点，上下左右相邻表示边"
   },
+  "conceptKnowledge": {},
   "suggestedTags": []
 }
 ```
 
 Only write tags with clear evidence. Put low-confidence tags in `suggestedTags`. Do not tag both DFS and BFS unless both are taught, implemented, or explicitly discussed.
+
+Before a confirmed tag can create a new SiYuan concept page, it must have concrete concept knowledge. If the local knowledge map does not support the tag, generate `conceptKnowledge` using `concept-knowledge-flow.md`; do not rely on generic category prose.
 
 ## Primary Data Structure
 
