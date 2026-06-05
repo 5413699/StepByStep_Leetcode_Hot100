@@ -27,6 +27,7 @@ Use this flow when the user has a final answer and wants repository completion. 
    - Include only the current problem's training process from the latest scaffold/coaching request to closeout.
    - Exclude previous problems, skill iteration, migration, SiYuan API troubleshooting, Git/environment work, and unrelated chat.
    - Write the digest to a UTF-8 JSON file and pass its path with `-ConversationDigestJson`.
+   - Do not build Chinese JSON through PowerShell here-strings, pipes, inline command strings, or decoded Git branch output. If manual JSON is needed, write it from a UTF-8 Python script/file to an ASCII temp path and immediately scan for `?`, `????`, `�`, and visible mojibake before sync.
 7. Generate readiness assessment using `interview-readiness-flow.md`.
 8. Run `mvn -q -DskipTests compile`.
 9. Stage only current problem files.
@@ -42,7 +43,7 @@ Codex 于 <yyyy-MM-dd HH:mm zzz> 提交
 
 11. Push current branch.
 12. If SiYuan is enabled, call `scripts/sync_leetcode_to_siyuan.py`.
-13. Validate exported SiYuan pages using `siyuan-sync-validation.md`.
+13. Validate SiYuan current-block kramdown using `siyuan-sync-validation.md`; never use exported full Markdown for write-back or required-text validation.
 
 ## Script Interfaces
 
@@ -99,4 +100,5 @@ The digest file should contain:
 - If unrelated dirty files exist, stop before commit.
 - If Git succeeds but SiYuan fails, do not roll back Git; report the SiYuan error.
 - If SiYuan validation fails, keep outgoing payload files and report the failing block id.
-- If a title, HPath, concept name, review label, or tag contains ASCII `?`, Unicode replacement characters, or visible mojibake detected by the sync script, stop before SiYuan write and report the offending field.
+- If any title, HPath, concept name, review label, tag, digest text, readiness text, concept knowledge, or generated page body contains `????`, Unicode replacement characters, or visible mojibake detected by the sync script, stop before SiYuan write and report the offending field.
+- If Git branch output is mojibake or contains non-ASCII characters that may be re-encoded incorrectly on Windows, omit it from the SiYuan payload or replace it with an ASCII-safe display value. The commit hash is the authoritative Git identifier for sync records.

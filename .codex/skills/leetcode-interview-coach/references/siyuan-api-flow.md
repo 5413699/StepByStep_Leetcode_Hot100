@@ -76,8 +76,11 @@ Do not print the token.
 - Problem HPath: `{systemRootHPath}/题集/{problemTitle}`
 - Concept HPaths are defined by `references/siyuan-wiki-policy.md`.
 - Validate all generated titles, labels, concept names, tags, and HPaths before any write. If corrupted metadata is detected, stop and report the field; do not create fallback pages.
+- Validate the full sync payload before any write. In body text, reject `????`, Unicode replacement characters, and visible mojibake; in titles, labels, tags, concepts, HPaths, and other metadata, also reject ASCII `?`.
 - Use `getIDsByHPath` to dedupe.
 - Use `createDocWithMd` only for missing documents.
 - Do not expose `<!-- codex-* -->` markers in SiYuan pages.
+- Do not pass Chinese page bodies through PowerShell pipelines, here-strings, inline `python -` snippets containing Chinese literals, or Git command output decoded by the host console. Build payloads with UTF-8 Python files or existing JSON files at ASCII temp paths, then pass only the path to the sync script.
+- If a Git branch name is Chinese or is returned as mojibake on Windows, omit it from the sync payload or replace it with an ASCII-safe display value. Keep the commit hash.
 
 After sync, validate current-block Markdown from `/api/block/getBlockKramdown` and return `siyuan://blocks/<id>` links for the problem and touched pages.
