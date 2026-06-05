@@ -37,7 +37,7 @@ SiYuan may insert zero-width inline markers around inline code when returning kr
 - If validation fails before Git commit, stop.
 - If validation fails after Git commit, do not roll back Git.
 - Keep outgoing Markdown and sync payload files with ASCII paths.
-- Report the failed block id, check name, and a short exported-content preview.
+- Report the failed block id, check name, and a short current-block kramdown preview.
 
 ## Encoding Rule
 
