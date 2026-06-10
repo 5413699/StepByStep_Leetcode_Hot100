@@ -97,34 +97,44 @@ $syncResult = "skipped"
 if (-not $SkipSiyuan) {
     $inputPath = $SyncInputJson
     if (-not $inputPath) {
-        $tagPlan = $null
-        if ($TagPlanJson) {
-            $tagPlan = Get-Content -LiteralPath $TagPlanJson -Raw -Encoding UTF8 | ConvertFrom-Json
+        $inputPath = Join-Path $env:TEMP ("leetcode-siyuan-sync-{0}.json" -f ([guid]::NewGuid().ToString("N")))
+        $payloadArgs = @(
+            (Join-Path $scriptDir "build_siyuan_payload.py"),
+            "--output", $inputPath,
+            "--problem-title", $ProblemTitle,
+            "--thinking", $Thinking,
+            "--commit", $commit
+        )
+        if ($StatementMarkdown) {
+            $payloadArgs += @("--statement-markdown", $StatementMarkdown)
         }
-        $conversationDigest = $null
-        if ($ConversationDigestJson) {
-            $conversationDigest = Get-Content -LiteralPath $ConversationDigestJson -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($ProcessMarkdown) {
+            $payloadArgs += @("--process-markdown", $ProcessMarkdown)
         }
-        $payload = [ordered]@{
-            problemTitle = $ProblemTitle
-            statementMarkdown = $StatementMarkdown
-            thinkingMarkdown = $Thinking
-            processMarkdown = $ProcessMarkdown
-            solutionJava = $SolutionContent
-            complexityMarkdown = $ComplexityMarkdown
-            pitfalls = $Pitfalls
-            tags = $(if ($tagPlan -and $tagPlan.tags) { $tagPlan.tags } else { @{} })
-            tagEvidence = $(if ($tagPlan -and $tagPlan.tagEvidence) { $tagPlan.tagEvidence } else { @{} })
-            conceptKnowledge = $(if ($tagPlan -and $tagPlan.conceptKnowledge) { $tagPlan.conceptKnowledge } else { @{} })
-            readiness = $(if ($ReadinessJson) { Get-Content -LiteralPath $ReadinessJson -Raw -Encoding UTF8 | ConvertFrom-Json } else { @{} })
-            conversationDigest = $(if ($conversationDigest) { $conversationDigest } else { @{} })
-            git = @{
-                branch = $branch
-                commit = $commit
+        if ($SolutionContent) {
+            $payloadArgs += @("--solution-java", $SolutionContent)
+        }
+        if ($ComplexityMarkdown) {
+            $payloadArgs += @("--complexity-markdown", $ComplexityMarkdown)
+        }
+        foreach ($pitfall in $Pitfalls) {
+            if ($pitfall) {
+                $payloadArgs += @("--pitfall", $pitfall)
             }
         }
-        $inputPath = Join-Path $env:TEMP ("leetcode-siyuan-sync-{0}.json" -f ([guid]::NewGuid().ToString("N")))
-        $payload | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $inputPath -Encoding UTF8
+        if ($TagPlanJson) {
+            $payloadArgs += @("--tag-plan-json", $TagPlanJson)
+        }
+        if ($ReadinessJson) {
+            $payloadArgs += @("--readiness-json", $ReadinessJson)
+        }
+        if ($ConversationDigestJson) {
+            $payloadArgs += @("--conversation-digest-json", $ConversationDigestJson)
+        }
+        & python @payloadArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to build SiYuan sync payload with UTF-8 Python writer."
+        }
     }
 
     $syncArgs = @((Join-Path $scriptDir "sync_leetcode_to_siyuan.py"), "--input", $inputPath)

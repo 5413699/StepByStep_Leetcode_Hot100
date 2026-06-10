@@ -19,6 +19,7 @@ Use this flow when the user has a final answer and wants repository completion. 
 
 1. Confirm the latest solution in the conversation is the final answer.
 2. Read the target Java file before editing.
+   - On Windows PowerShell 5.1, plain `Get-Content` may decode UTF-8 files without BOM as the local ANSI code page and display Chinese as mojibake. Use `Get-Content -Encoding UTF8` for display, or .NET strict UTF-8 reads for integrity checks.
 3. Replace only the marked `// region LeetCode solution` region using `scripts/replace_solution_region.ps1`.
 4. Update only the Codex-marked area in the project Markdown note when a note update is needed.
 5. Generate a tag plan using `tag-rules.md`.
@@ -30,6 +31,7 @@ Use this flow when the user has a final answer and wants repository completion. 
    - Do not build Chinese JSON through PowerShell here-strings, pipes, inline command strings, or decoded Git branch output. If manual JSON is needed, write it from a UTF-8 Python script/file to an ASCII temp path and immediately scan for `?`, `????`, `�`, and visible mojibake before sync.
 7. Generate readiness assessment using `interview-readiness-flow.md`.
 8. Run `mvn -q -DskipTests compile`.
+   - If a runnable sample is needed, invoke `"$env:JAVA_HOME\bin\java.exe"` explicitly. Do not treat a bare `java` crash as a solution failure until `where.exe java` and `JAVA_HOME` have been checked.
 9. Stage only current problem files.
 10. Commit with:
 
@@ -77,6 +79,8 @@ powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\
   -ReadinessJson "<readiness json>" `
   -ConversationDigestJson "<current problem digest json>"
 ```
+
+When no `-SyncInputJson` is supplied, `finish_leetcode_workflow.ps1` must build the SiYuan payload through `scripts/build_siyuan_payload.py`. Do not add a PowerShell `ConvertTo-Json | Set-Content` path for Chinese payloads.
 
 The digest file should contain:
 
