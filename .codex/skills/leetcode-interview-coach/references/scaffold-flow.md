@@ -39,6 +39,7 @@ Use this flow when the user asks to add a LeetCode Hot100 problem, create a bran
 ```
 
 5. Use `scripts/new_problem_scaffold.ps1` to create the note and Java file. The script refuses to overwrite existing files.
+   - If `NoteContent` or `JavaContent` is multi-line, call the script from the current PowerShell session with variables, for example `& .\...\new_problem_scaffold.ps1 -NoteContent $noteContent ...`. Do not wrap the whole call in another `powershell -File` command string; multi-line Chinese content can be split into stray arguments.
 
 6. Validate with `mvn -q -DskipTests compile`.
    - If running a sample `main`, prefer `& "$env:JAVA_HOME\bin\java.exe" -cp target\classes <main-class>` instead of bare `java`, because Windows PATH may resolve to stale `Oracle\javapath\java.exe`.

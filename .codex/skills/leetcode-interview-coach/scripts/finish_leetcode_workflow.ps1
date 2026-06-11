@@ -31,6 +31,7 @@ $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
 $env:PYTHONUTF8 = "1"
+$env:PYTHONDONTWRITEBYTECODE = "1"
 
 if (-not (Test-Path -LiteralPath ".git")) {
     throw "This script must run from the repository root."
@@ -70,7 +71,7 @@ function Update-MarkedMarkdownRegion {
 }
 
 if ($SolutionContent) {
-    & powershell -ExecutionPolicy Bypass -File (Join-Path $scriptDir "replace_solution_region.ps1") `
+    & (Join-Path $scriptDir "replace_solution_region.ps1") `
         -JavaPath $JavaPath `
         -SolutionContent $SolutionContent
 }
@@ -81,16 +82,15 @@ if ($NoteContent) {
 
 $finishScript = Join-Path $scriptDir "finish_problem.ps1"
 $finishArgs = @(
-    "-ExecutionPolicy", "Bypass",
-    "-File", $finishScript,
-    "-Paths", $JavaPath, $NotePath,
+    "-JavaPath", $JavaPath,
+    "-NotePath", $NotePath,
     "-ProblemTitle", $ProblemTitle,
     "-Thinking", $Thinking
 )
 if ($NoPush) {
     $finishArgs += "-NoPush"
 }
-& powershell @finishArgs
+& $finishScript @finishArgs
 
 $branch = (& git branch --show-current).Trim()
 $commit = (& git rev-parse --short HEAD).Trim()
@@ -142,6 +142,10 @@ if (-not $SkipSiyuan) {
     $syncArgs = @((Join-Path $scriptDir "sync_leetcode_to_siyuan.py"), "--input", $inputPath)
     if ($WorkflowConfigPath) {
         $syncArgs += @("--config", $WorkflowConfigPath)
+    }
+    $dryRunOutput = & python @($syncArgs + "--dry-run") 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "SiYuan dry-run failed after Git completion:`n$($dryRunOutput -join "`n")"
     }
     $syncOutput = & python @syncArgs 2>&1
     if ($LASTEXITCODE -ne 0) {

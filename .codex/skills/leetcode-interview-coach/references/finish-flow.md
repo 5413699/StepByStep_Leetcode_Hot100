@@ -24,6 +24,7 @@ Use this flow when the user has a final answer and wants repository completion. 
 4. Update only the Codex-marked area in the project Markdown note when a note update is needed.
 5. Generate a tag plan using `tag-rules.md`.
    - If a confirmed tag lacks local concept knowledge, use `concept-knowledge-flow.md` to search reputable open references and add `conceptKnowledge` to the tag plan.
+   - When checking whether a concept is already known in local scripts or notes, prefer fixed-string search (`rg -F "回溯" ...`) over broad regex alternation. Chinese tags and quoted strings are not regex problems; fixed-string search avoids accidental escaping failures.
 6. Generate a current-problem conversation digest using `conversation-digest-schema.md`.
    - Include only the current problem's training process from the latest scaffold/coaching request to closeout.
    - Exclude previous problems, skill iteration, migration, SiYuan API troubleshooting, Git/environment work, and unrelated chat.
@@ -33,6 +34,8 @@ Use this flow when the user has a final answer and wants repository completion. 
 8. Run `mvn -q -DskipTests compile`.
    - If a runnable sample is needed, invoke `"$env:JAVA_HOME\bin\java.exe"` explicitly. Do not treat a bare `java` crash as a solution failure until `where.exe java` and `JAVA_HOME` have been checked.
 9. Stage only current problem files.
+   - Prefer `scripts/finish_problem.ps1 -JavaPath ... -NotePath ...` over cross-process `-Paths "<java>","<note>"`. PowerShell 5.1 can collapse or split arrays unexpectedly when a command is constructed as one string.
+   - The finish script uses `git -c core.quotePath=false status --porcelain=v1` internally, so callers should not rely on global Git `core.quotePath` settings when Chinese paths are present.
 10. Commit with:
 
 ```text
@@ -44,7 +47,7 @@ Codex 于 <yyyy-MM-dd HH:mm zzz> 提交
 ```
 
 11. Push current branch.
-12. If SiYuan is enabled, call `scripts/sync_leetcode_to_siyuan.py`.
+12. If SiYuan is enabled, run `scripts/sync_leetcode_to_siyuan.py --dry-run` before the real write. `finish_leetcode_workflow.ps1` does this automatically.
 13. Validate SiYuan current-block kramdown using `siyuan-sync-validation.md`; never use exported full Markdown for write-back or required-text validation.
 
 ## Script Interfaces
@@ -61,10 +64,13 @@ Commit and push only relevant files:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\scripts\finish_problem.ps1 `
-  -Paths "<java path>","<note path>" `
+  -JavaPath "<java path>" `
+  -NotePath "<note path>" `
   -ProblemTitle "<problem title>" `
   -Thinking "<summary>"
 ```
+
+`-Paths` is still accepted for same-process calls, but do not document it as the default interface. In PowerShell 5.1, nested `powershell -File ... -Paths "<a>","<b>"` can arrive as one comma-joined string or as a stray positional argument.
 
 Full orchestrated closeout:
 
@@ -81,6 +87,8 @@ powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\
 ```
 
 When no `-SyncInputJson` is supplied, `finish_leetcode_workflow.ps1` must build the SiYuan payload through `scripts/build_siyuan_payload.py`. Do not add a PowerShell `ConvertTo-Json | Set-Content` path for Chinese payloads.
+
+Do not call child PowerShell scripts through a nested `powershell -File` process when passing multi-line Chinese strings or arrays. Prefer invoking bundled scripts in the current session with `& $script @args`, or pass UTF-8 JSON/file paths.
 
 The digest file should contain:
 

@@ -1,6 +1,9 @@
 param(
-    [Parameter(Mandatory = $true)]
-    [string[]]$Paths,
+    [string[]]$Paths = @(),
+
+    [string]$JavaPath,
+
+    [string]$NotePath,
 
     [Parameter(Mandatory = $true)]
     [string]$ProblemTitle,
@@ -12,9 +15,69 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
 
 if (-not (Test-Path -LiteralPath ".git")) {
     throw "This script must run from the repository root."
+}
+
+function Add-NormalizedInputPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [System.Collections.Generic.List[string]]$Target,
+        [string]$Path
+    )
+
+    if (-not $Path) {
+        return
+    }
+
+    $candidate = $Path.Trim()
+    if (-not $candidate) {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $candidate) -and $candidate.Contains(",")) {
+        foreach ($part in ($candidate -split ",")) {
+            Add-NormalizedInputPath -Target $Target -Path ($part.Trim().Trim("'").Trim('"'))
+        }
+        return
+    }
+
+    $Target.Add($candidate)
+}
+
+function Get-RepoRelativePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $repoRoot = ((& git rev-parse --show-toplevel).Trim() -replace '\\', '/')
+    $fullPath = ((Resolve-Path -LiteralPath $Path).Path -replace '\\', '/')
+    if ($fullPath.StartsWith($repoRoot + "/", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $fullPath.Substring($repoRoot.Length + 1)
+    }
+    $normalized = $Path -replace '\\', '/'
+    if ($normalized.StartsWith("./", [System.StringComparison]::Ordinal)) {
+        return $normalized.Substring(2)
+    }
+    return $normalized
+}
+
+$resolvedPaths = New-Object System.Collections.Generic.List[string]
+foreach ($path in $Paths) {
+    Add-NormalizedInputPath -Target $resolvedPaths -Path $path
+}
+Add-NormalizedInputPath -Target $resolvedPaths -Path $JavaPath
+Add-NormalizedInputPath -Target $resolvedPaths -Path $NotePath
+$Paths = $resolvedPaths | Select-Object -Unique
+
+if (-not $Paths -or $Paths.Count -eq 0) {
+    throw "No paths were supplied. Use -JavaPath/-NotePath, or pass -Paths from the current PowerShell process."
 }
 
 foreach ($path in $Paths) {
@@ -25,10 +88,10 @@ foreach ($path in $Paths) {
 
 & mvn -q -DskipTests compile
 
-$statusLines = & git status --porcelain
+$statusLines = & git -c core.quotePath=false status --porcelain=v1 --untracked-files=all
 $trackedSet = New-Object System.Collections.Generic.HashSet[string]
 foreach ($path in $Paths) {
-    $normalized = ($path -replace '\\', '/')
+    $normalized = Get-RepoRelativePath -Path $path
     [void]$trackedSet.Add($normalized)
 }
 
