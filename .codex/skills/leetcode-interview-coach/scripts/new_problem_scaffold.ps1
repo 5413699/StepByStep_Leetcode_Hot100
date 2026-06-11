@@ -32,7 +32,9 @@ function New-ScaffoldFile {
         New-Item -ItemType Directory -Path $parent | Out-Null
     }
 
-    Set-Content -LiteralPath $Path -Value $Content -Encoding UTF8
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    [System.IO.File]::WriteAllText($fullPath, $Content, $utf8NoBom)
 }
 
 New-ScaffoldFile -Path $NotePath -Content $NoteContent

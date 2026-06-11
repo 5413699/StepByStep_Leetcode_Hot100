@@ -64,7 +64,9 @@ function Update-MarkedMarkdownRegion {
     } else {
         $updated = $region + "`n"
     }
-    Set-Content -LiteralPath $Path -Value $updated -Encoding UTF8 -NoNewline
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    $fullPath = (Resolve-Path -LiteralPath $Path).Path
+    [System.IO.File]::WriteAllText($fullPath, $updated, $utf8NoBom)
 }
 
 if ($SolutionContent) {

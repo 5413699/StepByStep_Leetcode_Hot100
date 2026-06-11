@@ -35,5 +35,7 @@ $newContent = $content.Substring(0, $startIndex) +
     $replacement +
     $content.Substring($endIndex + $endMarker.Length)
 
-Set-Content -LiteralPath $JavaPath -Value $newContent -Encoding UTF8 -NoNewline
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$fullPath = (Resolve-Path -LiteralPath $JavaPath).Path
+[System.IO.File]::WriteAllText($fullPath, $newContent, $utf8NoBom)
 Write-Output "Updated solution region: $JavaPath"
