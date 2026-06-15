@@ -14,6 +14,7 @@ Use this flow when the user has a final answer and wants repository completion. 
 - Optional readiness JSON.
 - Optional current-problem conversation digest JSON.
 - Optional SiYuan sync payload JSON.
+- Optional workflow metadata JSON for Chinese long text (`problemTitle`, `thinking`, `solutionContent`, `noteContent`, `statementMarkdown`, `processMarkdown`, `complexityMarkdown`, `pitfalls`).
 
 ## Workflow
 
@@ -34,9 +35,10 @@ Use this flow when the user has a final answer and wants repository completion. 
 8. Run `mvn -q -DskipTests compile`.
    - If a runnable sample is needed, invoke `"$env:JAVA_HOME\bin\java.exe"` explicitly. Do not treat a bare `java` crash as a solution failure until `where.exe java` and `JAVA_HOME` have been checked.
 9. Stage only current problem files.
-   - Prefer `scripts/finish_problem.ps1 -JavaPath ... -NotePath ...` over cross-process `-Paths "<java>","<note>"`. PowerShell 5.1 can collapse or split arrays unexpectedly when a command is constructed as one string.
+   - Invoke scripts in the current PowerShell session with an argument array. Do not launch a nested `powershell -File` process for closeout.
+   - Put Chinese long text in UTF-8 JSON files and pass file paths. Use `-WorkflowMetadataJson` for full closeout or `-CommitMetadataJson` for commit-only closeout.
    - The finish script uses `git -c core.quotePath=false status --porcelain=v1` internally, so callers should not rely on global Git `core.quotePath` settings when Chinese paths are present.
-10. Commit with:
+10. Commit through `finish_problem.ps1`; it writes the commit message to a temporary UTF-8 file and runs `git commit -F`, then pushes the current branch. Do not create or amend Chinese commit messages manually through `git commit -m`.
 
 ```text
 <problem title>
@@ -56,38 +58,61 @@ Codex 于 <yyyy-MM-dd HH:mm zzz> 提交
 Replace solution:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\scripts\replace_solution_region.ps1 `
+$replaceScript = ".codex\skills\leetcode-interview-coach\scripts\replace_solution_region.ps1"
+& $replaceScript `
   -JavaPath "<java path>" `
   -SolutionContent $solution
 ```
 
-Commit and push only relevant files:
+Commit and push only relevant files. Put Chinese title/thinking in UTF-8 metadata JSON:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\scripts\finish_problem.ps1 `
+$metadataPath = Join-Path $env:TEMP "leetcode-commit-metadata.json"
+[System.IO.File]::WriteAllText(
+  $metadataPath,
+  (@{ problemTitle = "<problem title>"; thinking = "<summary>" } | ConvertTo-Json -Depth 10),
+  [System.Text.UTF8Encoding]::new($false)
+)
+$finishScript = ".codex\skills\leetcode-interview-coach\scripts\finish_problem.ps1"
+& $finishScript `
   -JavaPath "<java path>" `
   -NotePath "<note path>" `
-  -ProblemTitle "<problem title>" `
-  -Thinking "<summary>"
+  -CommitMetadataJson $metadataPath
+Remove-Item -LiteralPath $metadataPath -Force
 ```
 
-`-Paths` is still accepted for same-process calls, but do not document it as the default interface. In PowerShell 5.1, nested `powershell -File ... -Paths "<a>","<b>"` can arrive as one comma-joined string or as a stray positional argument.
+`-ProblemTitle` and `-Thinking` remain available for ASCII-safe or already verified same-process calls. `-Paths` is accepted only for same-process calls; prefer `-JavaPath` and `-NotePath`.
 
 Full orchestrated closeout:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\scripts\finish_leetcode_workflow.ps1 `
+$workflowMetadataPath = Join-Path $env:TEMP "leetcode-workflow-metadata.json"
+[System.IO.File]::WriteAllText(
+  $workflowMetadataPath,
+  (@{
+    problemTitle = "<problem title>"
+    thinking = "<summary>"
+    solutionContent = $solution
+    noteContent = $noteContent
+    statementMarkdown = $statement
+    processMarkdown = $process
+    complexityMarkdown = $complexity
+    pitfalls = $pitfalls
+  } | ConvertTo-Json -Depth 10),
+  [System.Text.UTF8Encoding]::new($false)
+)
+$workflowScript = ".codex\skills\leetcode-interview-coach\scripts\finish_leetcode_workflow.ps1"
+& $workflowScript `
   -JavaPath "<java path>" `
   -NotePath "<note path>" `
-  -ProblemTitle "<problem title>" `
-  -Thinking "<summary>" `
-  -SolutionContent $solution `
+  -WorkflowMetadataJson $workflowMetadataPath `
   -TagPlanJson "<tag plan json>" `
   -ReadinessJson "<readiness json>" `
   -ConversationDigestJson "<current problem digest json>"
+Remove-Item -LiteralPath $workflowMetadataPath -Force
 ```
 
-When no `-SyncInputJson` is supplied, `finish_leetcode_workflow.ps1` must build the SiYuan payload through `scripts/build_siyuan_payload.py`. Do not add a PowerShell `ConvertTo-Json | Set-Content` path for Chinese payloads.
+When no `-SyncInputJson` is supplied, `finish_leetcode_workflow.ps1` builds the SiYuan payload through `scripts/build_siyuan_payload.py` using a temporary UTF-8 metadata JSON file. Do not pass Chinese page bodies as PowerShell command-line arguments.
 
 Do not call child PowerShell scripts through a nested `powershell -File` process when passing multi-line Chinese strings or arrays. Prefer invoking bundled scripts in the current session with `& $script @args`, or pass UTF-8 JSON/file paths.
 

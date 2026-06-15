@@ -5,10 +5,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$NotePath,
 
-    [Parameter(Mandatory = $true)]
     [string]$ProblemTitle,
 
-    [Parameter(Mandatory = $true)]
     [string]$Thinking,
 
     [string]$SolutionContent,
@@ -21,6 +19,7 @@ param(
     [string]$ReadinessJson,
     [string]$ConversationDigestJson,
     [string]$SyncInputJson,
+    [string]$WorkflowMetadataJson,
     [string]$WorkflowConfigPath,
     [switch]$SkipSiyuan,
     [switch]$NoPush
@@ -70,6 +69,54 @@ function Update-MarkedMarkdownRegion {
     [System.IO.File]::WriteAllText($fullPath, $updated, $utf8NoBom)
 }
 
+function Read-Utf8JsonObject {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        throw "JSON file does not exist: $Path"
+    }
+
+    $utf8Strict = New-Object System.Text.UTF8Encoding($false, $true)
+    $fullPath = (Resolve-Path -LiteralPath $Path).Path
+    $text = [System.IO.File]::ReadAllText($fullPath, $utf8Strict)
+    return $text | ConvertFrom-Json
+}
+
+function Write-Utf8Json {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [object]$Value
+    )
+
+    $json = $Value | ConvertTo-Json -Depth 10
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $json, $utf8NoBom)
+}
+
+if ($WorkflowMetadataJson) {
+    $workflowMetadata = Read-Utf8JsonObject -Path $WorkflowMetadataJson
+    if ($workflowMetadata.problemTitle) { $ProblemTitle = [string]$workflowMetadata.problemTitle }
+    if ($workflowMetadata.thinking) { $Thinking = [string]$workflowMetadata.thinking }
+    if ($workflowMetadata.solutionContent) { $SolutionContent = [string]$workflowMetadata.solutionContent }
+    if ($workflowMetadata.noteContent) { $NoteContent = [string]$workflowMetadata.noteContent }
+    if ($workflowMetadata.statementMarkdown) { $StatementMarkdown = [string]$workflowMetadata.statementMarkdown }
+    if ($workflowMetadata.processMarkdown) { $ProcessMarkdown = [string]$workflowMetadata.processMarkdown }
+    if ($workflowMetadata.complexityMarkdown) { $ComplexityMarkdown = [string]$workflowMetadata.complexityMarkdown }
+    if ($workflowMetadata.pitfalls) { $Pitfalls = @($workflowMetadata.pitfalls | ForEach-Object { [string]$_ }) }
+}
+
+if (-not $ProblemTitle) {
+    throw "ProblemTitle is required. Pass -ProblemTitle or provide problemTitle in -WorkflowMetadataJson."
+}
+if (-not $Thinking) {
+    throw "Thinking is required. Pass -Thinking or provide thinking in -WorkflowMetadataJson."
+}
+
 if ($SolutionContent) {
     & (Join-Path $scriptDir "replace_solution_region.ps1") `
         -JavaPath $JavaPath `
@@ -81,16 +128,26 @@ if ($NoteContent) {
 }
 
 $finishScript = Join-Path $scriptDir "finish_problem.ps1"
+$commitMetadataPath = Join-Path $env:TEMP ("leetcode-commit-metadata-{0}.json" -f ([guid]::NewGuid().ToString("N")))
+Write-Utf8Json -Path $commitMetadataPath -Value ([pscustomobject]@{
+    problemTitle = $ProblemTitle
+    thinking = $Thinking
+})
 $finishArgs = @(
     "-JavaPath", $JavaPath,
     "-NotePath", $NotePath,
-    "-ProblemTitle", $ProblemTitle,
-    "-Thinking", $Thinking
+    "-CommitMetadataJson", $commitMetadataPath
 )
 if ($NoPush) {
     $finishArgs += "-NoPush"
 }
-& $finishScript @finishArgs
+try {
+    & $finishScript @finishArgs
+} finally {
+    if (Test-Path -LiteralPath $commitMetadataPath) {
+        Remove-Item -LiteralPath $commitMetadataPath -Force
+    }
+}
 
 $branch = (& git branch --show-current).Trim()
 $commit = (& git rev-parse --short HEAD).Trim()
@@ -100,30 +157,22 @@ if (-not $SkipSiyuan) {
     $inputPath = $SyncInputJson
     if (-not $inputPath) {
         $inputPath = Join-Path $env:TEMP ("leetcode-siyuan-sync-{0}.json" -f ([guid]::NewGuid().ToString("N")))
+        $payloadMetadataPath = Join-Path $env:TEMP ("leetcode-siyuan-metadata-{0}.json" -f ([guid]::NewGuid().ToString("N")))
+        Write-Utf8Json -Path $payloadMetadataPath -Value ([pscustomobject]@{
+            problemTitle = $ProblemTitle
+            thinking = $Thinking
+            commit = $commit
+            statementMarkdown = $StatementMarkdown
+            processMarkdown = $ProcessMarkdown
+            solutionJava = $SolutionContent
+            complexityMarkdown = $ComplexityMarkdown
+            pitfalls = $Pitfalls
+        })
         $payloadArgs = @(
             (Join-Path $scriptDir "build_siyuan_payload.py"),
             "--output", $inputPath,
-            "--problem-title", $ProblemTitle,
-            "--thinking", $Thinking,
-            "--commit", $commit
+            "--metadata-json", $payloadMetadataPath
         )
-        if ($StatementMarkdown) {
-            $payloadArgs += @("--statement-markdown", $StatementMarkdown)
-        }
-        if ($ProcessMarkdown) {
-            $payloadArgs += @("--process-markdown", $ProcessMarkdown)
-        }
-        if ($SolutionContent) {
-            $payloadArgs += @("--solution-java", $SolutionContent)
-        }
-        if ($ComplexityMarkdown) {
-            $payloadArgs += @("--complexity-markdown", $ComplexityMarkdown)
-        }
-        foreach ($pitfall in $Pitfalls) {
-            if ($pitfall) {
-                $payloadArgs += @("--pitfall", $pitfall)
-            }
-        }
         if ($TagPlanJson) {
             $payloadArgs += @("--tag-plan-json", $TagPlanJson)
         }
@@ -133,7 +182,13 @@ if (-not $SkipSiyuan) {
         if ($ConversationDigestJson) {
             $payloadArgs += @("--conversation-digest-json", $ConversationDigestJson)
         }
-        & python @payloadArgs
+        try {
+            & python @payloadArgs
+        } finally {
+            if (Test-Path -LiteralPath $payloadMetadataPath) {
+                Remove-Item -LiteralPath $payloadMetadataPath -Force
+            }
+        }
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to build SiYuan sync payload with UTF-8 Python writer."
         }

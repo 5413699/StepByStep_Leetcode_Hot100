@@ -68,9 +68,9 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make low-level SiYuan API code depend on LeetCode note policy. Use finish flow only as the orchestrator.
 - Use this skill's bundled scripts directly; do not route through legacy scaffold tooling.
 - Never edit SiYuan `.sy` files directly. Use official HTTP APIs only.
-- Never construct Chinese SiYuan payloads through ad hoc PowerShell string concatenation, here-strings, pipelines, inline `python -` snippets containing Chinese literals, or host-decoded Git output. Use UTF-8 Python/JSON files at ASCII temp paths, then pass only file paths to scripts.
+- Never pass Chinese long text through nested PowerShell, ad hoc command strings, pipelines, inline `python -` snippets, or host-decoded Git output. Write UTF-8 JSON/text files at ASCII temp paths, then pass only file paths to scripts.
 - On Windows PowerShell 5.1, do not use plain `Get-Content` output as evidence that a UTF-8 Chinese file is corrupted; read with `-Encoding UTF8` or strict .NET UTF-8 APIs. For runnable Java samples, prefer `$env:JAVA_HOME\bin\java.exe` over bare `java` after checking `where.exe java`.
-- On Windows PowerShell 5.1, avoid nested `powershell -File` calls for arguments containing Chinese text, multi-line content, or arrays. Invoke bundled scripts in the current session with explicit parameters, or pass UTF-8 JSON/file paths. Prefer `finish_problem.ps1 -JavaPath ... -NotePath ...` for closeout commits.
+- On Windows PowerShell 5.1, invoke bundled scripts in the current session with argument arrays. For closeout, prefer `finish_leetcode_workflow.ps1 -WorkflowMetadataJson ...` or `finish_problem.ps1 -CommitMetadataJson ...`; do not use nested `powershell -File` for Chinese text, multi-line content, or arrays.
 - When inspecting local concept support, prefer `rg -F "<tag>"` fixed-string searches over broad regex alternation unless a regex is actually needed.
 - SiYuan user-visible pages must not contain `<!-- codex-* -->` markers. Those markers may remain in repository Markdown only.
 - The new SiYuan target structure is authoritative: `算法题/面试手撕训练系统`. Legacy pages may be migrated into it, but new writes must not create new knowledge pages under the old `按数据结构分类` / `按方法分类` layout.
@@ -94,7 +94,7 @@ When the user reaches a final answer:
 6. Generate a current-problem conversation digest. Include only the interaction about this problem from scaffold/coaching to closeout; exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
 7. Generate an interview-readiness assessment and review labels.
 8. Run `mvn -q -DskipTests compile`.
-9. Commit and push with a Chinese message containing the user's thinking and `Codex 于 <timestamp> 提交`.
+9. Commit and push through the bundled finish script, using UTF-8 metadata JSON when Chinese text is involved.
 10. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate current-block Markdown, and report failure without rolling back Git.
 
 ## User-Facing Closeout

@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import urllib.error
 from pathlib import Path
+
+sys.dont_write_bytecode = True
 
 from siyuan_client import DEFAULT_CONFIG, DEFAULT_SYSTEM_ROOT, DEFAULT_URL, DEFAULT_WORKSPACE, load_config, open_client_from_config, write_json
 

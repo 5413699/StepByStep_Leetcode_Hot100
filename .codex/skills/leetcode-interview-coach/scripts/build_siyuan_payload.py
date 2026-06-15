@@ -22,9 +22,10 @@ def as_list(values: list[str] | None) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True)
-    parser.add_argument("--problem-title", required=True)
-    parser.add_argument("--thinking", required=True)
-    parser.add_argument("--commit", required=True)
+    parser.add_argument("--metadata-json")
+    parser.add_argument("--problem-title", default="")
+    parser.add_argument("--thinking", default="")
+    parser.add_argument("--commit", default="")
     parser.add_argument("--statement-markdown", default="")
     parser.add_argument("--process-markdown", default="")
     parser.add_argument("--solution-java", default="")
@@ -35,25 +36,36 @@ def main() -> int:
     parser.add_argument("--conversation-digest-json")
     args = parser.parse_args()
 
+    metadata = load_json(args.metadata_json, {})
     tag_plan = load_json(args.tag_plan_json, {})
     readiness = load_json(args.readiness_json, {})
     conversation_digest = load_json(args.conversation_digest_json, {})
 
+    problem_title = args.problem_title or metadata.get("problemTitle", "")
+    thinking = args.thinking or metadata.get("thinking", "")
+    commit = args.commit or metadata.get("commit", "")
+    if not problem_title:
+        parser.error("--problem-title or metadataJson.problemTitle is required")
+    if not thinking:
+        parser.error("--thinking or metadataJson.thinking is required")
+    if not commit:
+        parser.error("--commit or metadataJson.commit is required")
+
     payload = {
-        "problemTitle": args.problem_title,
-        "statementMarkdown": args.statement_markdown,
-        "thinkingMarkdown": args.thinking,
-        "processMarkdown": args.process_markdown,
-        "solutionJava": args.solution_java,
-        "complexityMarkdown": args.complexity_markdown,
-        "pitfalls": as_list(args.pitfall),
+        "problemTitle": problem_title,
+        "statementMarkdown": args.statement_markdown or metadata.get("statementMarkdown", ""),
+        "thinkingMarkdown": thinking,
+        "processMarkdown": args.process_markdown or metadata.get("processMarkdown", ""),
+        "solutionJava": args.solution_java or metadata.get("solutionJava", ""),
+        "complexityMarkdown": args.complexity_markdown or metadata.get("complexityMarkdown", ""),
+        "pitfalls": as_list(args.pitfall or metadata.get("pitfalls", [])),
         "tags": tag_plan.get("tags", {}),
         "tagEvidence": tag_plan.get("tagEvidence", {}),
         "conceptKnowledge": tag_plan.get("conceptKnowledge", {}),
         "readiness": readiness,
         "conversationDigest": conversation_digest,
         "git": {
-            "commit": args.commit,
+            "commit": commit,
         },
     }
 

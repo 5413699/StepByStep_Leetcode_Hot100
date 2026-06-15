@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+sys.dont_write_bytecode = True
+
 from siyuan_client import (
     DEFAULT_CONFIG,
     SiyuanError,

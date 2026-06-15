@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+sys.dont_write_bytecode = True
+
 from siyuan_client import DEFAULT_CONFIG, get_block_kramdown, load_config, normalize_hpath, open_client_from_config, update_doc
 from sync_leetcode_to_siyuan import CATEGORY_DESCRIPTIONS, CATEGORY_ORDER, own_doc_markdown, strip_block_markdown
 

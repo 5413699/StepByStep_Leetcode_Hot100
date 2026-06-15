@@ -49,7 +49,8 @@ Use this flow when the user asks to add a LeetCode Hot100 problem, create a bran
 Create or switch branch:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\scripts\new_problem_branch.ps1 `
+$branchScript = ".codex\skills\leetcode-interview-coach\scripts\new_problem_branch.ps1"
+& $branchScript `
   -CategoryIndex 8 `
   -Difficulty M `
   -ProblemNumber 200 `
@@ -59,7 +60,8 @@ powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\
 Create files:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .codex\skills\leetcode-interview-coach\scripts\new_problem_scaffold.ps1 `
+$scaffoldScript = ".codex\skills\leetcode-interview-coach\scripts\new_problem_scaffold.ps1"
+& $scaffoldScript `
   -NotePath "<note path>" `
   -JavaPath "<java path>" `
   -NoteContent $noteContent `
