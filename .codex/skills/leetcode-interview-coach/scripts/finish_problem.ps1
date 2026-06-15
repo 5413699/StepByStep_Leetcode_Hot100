@@ -135,8 +135,13 @@ if ($NoPush) {
 }
 
 $branch = (& git branch --show-current).Trim()
-$upstream = (& git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null)
-if ($LASTEXITCODE -eq 0 -and $upstream) {
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$upstreamOutput = & git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>$null
+$upstreamExitCode = $LASTEXITCODE
+$ErrorActionPreference = $previousErrorActionPreference
+$upstream = ($upstreamOutput | Select-Object -First 1)
+if ($upstreamExitCode -eq 0 -and $upstream) {
     & git push
 } else {
     $remote = (& git config "branch.$branch.remote").Trim()
