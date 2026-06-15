@@ -48,6 +48,7 @@ Codex 于 <yyyy-MM-dd HH:mm zzz> 提交
 
 11. Push current branch.
 12. If SiYuan is enabled, run `scripts/sync_leetcode_to_siyuan.py --dry-run` before the real write. `finish_leetcode_workflow.ps1` does this automatically.
+    - Concept pages may also receive compact `教练摘要` entries derived from the conversation digest. These entries are for future coach-memory retrieval and must stay short, deduped, and problem-linked.
 13. Validate SiYuan current-block kramdown using `siyuan-sync-validation.md`; never use exported full Markdown for write-back or required-text validation.
 
 ## Script Interfaces

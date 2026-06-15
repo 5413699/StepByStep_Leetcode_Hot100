@@ -22,6 +22,7 @@ Validate every touched user-facing page through `/api/block/getBlockKramdown`, s
 - The knowledge home page contains the current sync's touched category names and concept names.
 - The root home page, problem index page, and expression home page contain the current problem title.
 - Concept pages contain `## 来自题目的理解` when digest concept updates are provided.
+- Concept pages contain compact `## 教练摘要` entries when coach-memory notes are generated from the digest.
 - Home pages and category pages are not blank and contain useful entry links or section descriptions.
 - Review home page does not list empty/generic review labels. Empty review label pages should not exist.
 - Audit log entries are newest-first and older than 7 days are pruned.

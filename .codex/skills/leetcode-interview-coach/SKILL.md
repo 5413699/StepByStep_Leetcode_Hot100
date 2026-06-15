@@ -16,6 +16,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - **Coach/interview practice**: read `references/coach-flow.md`.
   - Triggers: "教我", "讲讲", "没思路", "帮我看代码", "模拟面试".
   - Output: questions, tiered hints, code review, dry run, complexity, interview wording.
+  - If the problem has clear high-confidence concepts and SiYuan is available, optionally read `references/coach-memory-flow.md` for lightweight long-term learning memory. Do not load full historical notes.
 
 - **Assess interview readiness**: read `references/interview-readiness-flow.md`.
   - Triggers: "掌握了吗", "面试怎么说", "复习建议", "我卡在哪里", finish flow after coaching.
@@ -63,6 +64,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 ## Global Rules
 
 - Prefer Chinese responses in this repository.
+- Coach like a careful interview teacher, not a note reader: observe the user's attempt, ask focused questions, preserve useful intuition, and tighten the explanation toward hand-coding ability.
 - Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make low-level SiYuan API code depend on LeetCode note policy. Use finish flow only as the orchestrator.
 - Use this skill's bundled scripts directly; do not route through legacy scaffold tooling.
 - Never edit SiYuan `.sy` files directly. Use official HTTP APIs only.

@@ -5,10 +5,16 @@ Use this flow when the user wants to learn, practice, debug their idea, or prepa
 ## Coaching Rules
 
 - Default to coaching, not solving.
+- Keep the user's current attempt primary. Use long-term memory only as a quiet guide for better hints, not as text to recite.
 - Ask 1-3 focused questions at a time.
 - Give full code only when the user asks, is blocked after targeted hints, or has already assembled the solution.
 - Keep explanations in Chinese unless the user asks otherwise.
 - Preserve the user's wording when it is correct; polish only for clarity and interview readiness.
+- Be warm but rigorous: point out the real skill bottleneck, then give the smallest next step that helps the user move.
+
+## Optional Long-Term Memory
+
+If the current problem has clear concepts and SiYuan is likely available, read `coach-memory-flow.md` and run its script before giving hints. Use at most 1-2 relevant reminders from memory. If memory lookup fails or is irrelevant, continue normally.
 
 ## Hint Ladder
 

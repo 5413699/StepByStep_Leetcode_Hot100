@@ -712,6 +712,53 @@ def append_unique_learning_note(markdown: str, problem_id: str, title: str, note
     return append_unique_under_heading(markdown, "来自题目的理解", line, note)
 
 
+def coach_memory_notes(payload: dict[str, Any], tag_data: dict[str, list[str]] | None = None) -> dict[str, list[str]]:
+    allowed: set[str] = set()
+    if tag_data:
+        for group in ["dataStructures", "methods", "patterns", "commonFunctions"]:
+            allowed.update(tag_data.get(group) or [])
+    digest = conversation_digest(payload)
+    result: dict[str, list[str]] = {}
+    for item in digest.get("conceptUpdates", []):
+        concept = item["concept"]
+        if allowed and concept not in allowed:
+            continue
+        note = as_text(item.get("note"))
+        if note:
+            result.setdefault(concept, []).append(note)
+    for concept in allowed:
+        for item in as_list(digest.get("reviewAdvice"))[:2]:
+            if concept in item:
+                result.setdefault(concept, []).append(item)
+    return {key: unique(value)[:3] for key, value in result.items()}
+
+
+def append_unique_coach_memory(markdown: str, problem_id: str, title: str, note: str, *, limit: int = 20) -> str:
+    markdown = markdown.replace("- 暂无自动补充。\n", "").replace("- 暂无自动补充。", "")
+    line = f"- {problem_ref(problem_id, title)}：{note}"
+    updated = append_unique_under_heading(markdown, "教练摘要", line, note)
+    pattern = re.compile(r"(?ms)^(##\s+教练摘要\s*\n)(.*?)(?=^##\s+|\Z)")
+    match = pattern.search(updated)
+    if not match:
+        return updated
+    header = match.group(1)
+    body = match.group(2)
+    bullets = []
+    seen = set()
+    for raw in body.splitlines():
+        text = raw.strip()
+        if not text.startswith("- "):
+            continue
+        key = text
+        if key in seen:
+            continue
+        seen.add(key)
+        bullets.append(text)
+    trimmed = "\n".join(bullets[:limit]).strip()
+    replacement = header + ("\n" + trimmed + "\n\n" if trimmed else "\n")
+    return updated[: match.start()] + replacement + updated[match.end() :]
+
+
 def concept_markdown(name: str, category: str, problem_id: str, title: str, preset: dict[str, Any]) -> str:
     intro = as_text(preset.get("intro"))
     signals = as_list(preset.get("signals"))
@@ -758,6 +805,8 @@ def concept_markdown(name: str, category: str, problem_id: str, title: str, pres
         f"- {problem_ref(problem_id, title)}",
         "",
         "## 来自题目的理解",
+        "",
+        "## 教练摘要",
         "",
     ]
     if category:
@@ -1103,6 +1152,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     problem_id, problem_created = ensure_doc(client, notebook, problem_hpath, "")
     concept_refs: dict[str, str] = {}
     learning_notes = concept_update_notes(payload, tag_data)
+    coach_notes = coach_memory_notes(payload, tag_data)
     concept_results = []
     category_results: dict[str, dict[str, Any]] = {}
     for category, name, hpath in concept_targets:
@@ -1114,6 +1164,8 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
         updated = append_unique_problem_link(existing, problem_id, title)
         for note in learning_notes.get(name, []):
             updated = append_unique_learning_note(updated, problem_id, title, note)
+        for note in coach_notes.get(name, []):
+            updated = append_unique_coach_memory(updated, problem_id, title, note)
         if updated != existing:
             update_doc(client, cid, updated)
         concept_results.append({"name": name, "category": category, "id": cid, "url": f"siyuan://blocks/{cid}", "created": created})
@@ -1198,7 +1250,8 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     )
     for item in concept_results:
         content = own_doc_markdown(client, item["id"])
-        validation_errors.extend(validate_page(content, [title] + learning_notes.get(item["name"], []), f"concept:{item['name']}"))
+        required = [title] + learning_notes.get(item["name"], []) + coach_notes.get(item["name"], [])
+        validation_errors.extend(validate_page(content, required, f"concept:{item['name']}"))
     for item in category_results.values():
         content = own_doc_markdown(client, item["id"])
         concept_names = [concept["name"] for concept in concept_results if concept["category"] == item["category"]]

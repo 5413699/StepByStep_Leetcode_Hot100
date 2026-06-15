@@ -78,6 +78,7 @@ When updating an existing concept page:
 - Do not write HTML `<a href=...>` links.
 - `什么时候想到它` must be concept-specific. Avoid using the same generic two bullets for every concept.
 - When a current-problem conversation digest has concept updates, add them under `## 来自题目的理解` and dedupe by problem id and note text.
+- Also maintain `## 教练摘要` as a compact long-term memory section for future coaching. Each entry should be one problem-linked sentence about a reusable pattern, weak point, or contrast. Keep it deduped and bounded; it is not a full solution archive.
 
 ## Category Index Pages
 
