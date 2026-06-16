@@ -102,7 +102,8 @@ if ($WorkflowMetadataJson) {
     $workflowMetadata = Read-Utf8JsonObject -Path $WorkflowMetadataJson
     if ($workflowMetadata.problemTitle) { $ProblemTitle = [string]$workflowMetadata.problemTitle }
     if ($workflowMetadata.thinking) { $Thinking = [string]$workflowMetadata.thinking }
-    if ($workflowMetadata.solutionContent) { $SolutionContent = [string]$workflowMetadata.solutionContent }
+    if ($workflowMetadata.solutionJava) { $SolutionContent = [string]$workflowMetadata.solutionJava }
+    elseif ($workflowMetadata.solutionContent) { $SolutionContent = [string]$workflowMetadata.solutionContent }
     if ($workflowMetadata.noteContent) { $NoteContent = [string]$workflowMetadata.noteContent }
     if ($workflowMetadata.statementMarkdown) { $StatementMarkdown = [string]$workflowMetadata.statementMarkdown }
     if ($workflowMetadata.processMarkdown) { $ProcessMarkdown = [string]$workflowMetadata.processMarkdown }

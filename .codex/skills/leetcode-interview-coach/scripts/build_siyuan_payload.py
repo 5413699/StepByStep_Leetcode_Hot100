@@ -19,6 +19,16 @@ def as_list(values: list[str] | None) -> list[str]:
     return [value for value in values or [] if value]
 
 
+def first_text(*values: Any) -> str:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value)
+        if text:
+            return text
+    return ""
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True)
@@ -50,13 +60,18 @@ def main() -> int:
         parser.error("--thinking or metadataJson.thinking is required")
     if not commit:
         parser.error("--commit or metadataJson.commit is required")
+    solution_java = first_text(
+        args.solution_java,
+        metadata.get("solutionJava"),
+        metadata.get("solutionContent"),
+    )
 
     payload = {
         "problemTitle": problem_title,
         "statementMarkdown": args.statement_markdown or metadata.get("statementMarkdown", ""),
         "thinkingMarkdown": thinking,
         "processMarkdown": args.process_markdown or metadata.get("processMarkdown", ""),
-        "solutionJava": args.solution_java or metadata.get("solutionJava", ""),
+        "solutionJava": solution_java,
         "complexityMarkdown": args.complexity_markdown or metadata.get("complexityMarkdown", ""),
         "pitfalls": as_list(args.pitfall or metadata.get("pitfalls", [])),
         "tags": tag_plan.get("tags", {}),

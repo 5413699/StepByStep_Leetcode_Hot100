@@ -580,6 +580,10 @@ def collect_payload_strings(value: Any, path: str = "$") -> list[tuple[str, str]
 
 
 def validate_sync_text_inputs(payload: dict[str, Any], root: str, plan: dict[str, Any]) -> None:
+    solution_java = as_text(payload.get("solutionJava"))
+    if not solution_java:
+        raise SiyuanError("同步负载缺少 solutionJava，已停止写入思源，避免生成空的最终题解。")
+
     candidates: list[tuple[str, str]] = [("wikiPolicy.systemRootHPath", root)]
     candidates.extend(collect_named_strings(payload))
     candidates.extend(collect_named_strings(plan, "plan"))
@@ -597,6 +601,7 @@ def validate_sync_text_inputs(payload: dict[str, Any], root: str, plan: dict[str
     body_candidates.extend(collect_payload_strings(payload.get("breakthroughMarkdown"), "$.breakthroughMarkdown"))
     body_candidates.extend(collect_payload_strings(payload.get("interviewExpressionMarkdown"), "$.interviewExpressionMarkdown"))
     body_candidates.extend(collect_payload_strings(payload.get("processMarkdown"), "$.processMarkdown"))
+    body_candidates.extend(collect_payload_strings(solution_java, "$.solutionJava"))
     body_candidates.extend(collect_payload_strings(payload.get("complexityMarkdown"), "$.complexityMarkdown"))
     body_candidates.extend(collect_payload_strings(payload.get("pitfalls"), "$.pitfalls"))
     body_candidates.extend(collect_payload_strings(payload.get("readiness"), "$.readiness"))
@@ -653,6 +658,44 @@ def strip_block_markdown(markdown: str) -> str:
 
 def own_doc_markdown(client: Any, doc_id: str) -> str:
     return strip_block_markdown(get_block_kramdown(client, doc_id))
+
+
+def doc_blocks_markdown(client: Any, doc_id: str) -> str:
+    escaped_id = doc_id.replace("'", "''")
+    rows = client.data(
+        "/api/query/sql",
+        {
+            "stmt": (
+                "select markdown, content from blocks "
+                f"where root_id='{escaped_id}' "
+                "order by created, sort, id"
+            )
+        },
+    ) or []
+    parts: list[str] = []
+    for row in rows:
+        text = as_text(row.get("markdown")) or as_text(row.get("content"))
+        if text:
+            parts.append(text)
+    return strip_block_markdown("\n".join(parts))
+
+
+def solution_required_lines(solution_java: str) -> list[str]:
+    lines = [line.strip() for line in solution_java.splitlines()]
+    candidates = [
+        line
+        for line in lines
+        if line
+        and not line.startswith("//")
+        and (
+            re.search(r"\b(public|private|protected)\b", line)
+            or "return " in line
+            or "new " in line
+            or "visited" in line
+            or "dirs" in line
+        )
+    ]
+    return unique(candidates[:4])
 
 
 def clean_linked_page_markdown(markdown: str) -> str:
@@ -1232,24 +1275,22 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
 
     validation_errors: list[str] = []
     problem_content = own_doc_markdown(client, problem_id)
+    problem_blocks_content = doc_blocks_markdown(client, problem_id)
     digest_required: list[str] = []
     if digest_has_content(digest):
-        for value in [
-            payload.get("firstReactionMarkdown") or digest.get("firstReaction"),
-            (as_list(ready.get("weakPoints")) + as_list(digest.get("stuckPoints")) or [""])[0],
-            payload.get("breakthroughMarkdown") or (digest.get("breakthroughs") or [""])[0],
-            payload.get("interviewExpressionMarkdown") or digest.get("interviewExpression"),
-        ]:
-            text = as_text(value)
-            if text:
-                digest_required.append(text)
+        digest_required.extend(["第一反应", "卡壳点", "关键突破", "面试表达", "复习建议"])
     validation_errors.extend(
         validate_page(
-            problem_content,
+            problem_blocks_content or problem_content,
             ["面试版思路", "最终题解", "掌握状态", sanitized_git(payload).get("commit", "")] + digest_required,
             "problem",
         )
     )
+    solution_lines = solution_required_lines(as_text(payload.get("solutionJava")))
+    if not solution_lines:
+        validation_errors.append("problem: solutionJava has no verifiable code lines")
+    else:
+        validation_errors.extend(validate_page(problem_blocks_content, solution_lines, "problem:solution"))
     for item in concept_results:
         content = own_doc_markdown(client, item["id"])
         required = [title] + learning_notes.get(item["name"], []) + coach_notes.get(item["name"], [])
