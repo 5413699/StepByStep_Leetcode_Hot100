@@ -133,13 +133,13 @@ Write-Utf8Json -Path $commitMetadataPath -Value ([pscustomobject]@{
     problemTitle = $ProblemTitle
     thinking = $Thinking
 })
-$finishArgs = @(
-    "-JavaPath", $JavaPath,
-    "-NotePath", $NotePath,
-    "-CommitMetadataJson", $commitMetadataPath
-)
+$finishArgs = @{
+    JavaPath = $JavaPath
+    NotePath = $NotePath
+    CommitMetadataJson = $commitMetadataPath
+}
 if ($NoPush) {
-    $finishArgs += "-NoPush"
+    $finishArgs.NoPush = $true
 }
 try {
     & $finishScript @finishArgs
