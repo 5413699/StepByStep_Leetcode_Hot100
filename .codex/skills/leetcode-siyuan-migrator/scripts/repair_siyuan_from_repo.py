@@ -20,6 +20,7 @@ from siyuan_client import (  # noqa: E402
     DEFAULT_CONFIG,
     SiyuanClient,
     SiyuanError,
+    discover_siyuan_workspace,
     ensure_doc,
     export_doc,
     get_block_kramdown,
@@ -575,6 +576,10 @@ def concept_template(name: str, category: str, problem_links: list[str]) -> str:
 
 def validate_export(markdown: str, title: str) -> list[str]:
     errors = []
+    local_path_markers = ["F:\\"]
+    discovered_workspace = discover_siyuan_workspace()
+    if discovered_workspace:
+        local_path_markers.append(discovered_workspace)
     for marker in [
         "????",
         "\ufffd",
@@ -586,7 +591,7 @@ def validate_export(markdown: str, title: str) -> list[str]:
         "## 迁移补充",
         "src/main/java",
         "src/notes",
-        "F:\\",
+        *local_path_markers,
     ]:
         if marker in markdown:
             errors.append(f"{title}: contains {marker}")

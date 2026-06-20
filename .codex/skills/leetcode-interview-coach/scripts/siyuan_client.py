@@ -15,8 +15,19 @@ from typing import Any
 
 DEFAULT_CONFIG = Path.home() / ".codex" / "leetcode-hot100-workflow.local.json"
 DEFAULT_URL = "http://127.0.0.1:6806"
-DEFAULT_WORKSPACE = r"F:\就业资料-陈智飞\SiYuan_czf"
+DEFAULT_WORKSPACE = r"E:\000_SIYUAN"
 DEFAULT_SYSTEM_ROOT = "/算法题/面试手撕训练系统"
+
+WORKSPACE_ENV_VARS = [
+    "SIYUAN_WORKSPACE",
+    "SIYUAN_WORKSPACE_PATH",
+    "SIYUAN_DATA_DIR",
+]
+
+WORKSPACE_CANDIDATE_DIRS = [
+    r"E:\000_SIYUAN",
+    r"F:\就业资料-陈智飞\SiYuan_czf",
+]
 
 
 class SiyuanError(RuntimeError):
@@ -73,6 +84,70 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def is_siyuan_workspace(path: str | Path | None) -> bool:
+    if not path:
+        return False
+    candidate = Path(path).expanduser()
+    return candidate.is_dir() and all((candidate / name).is_dir() for name in ["conf", "data", "repo"])
+
+
+def normalize_workspace_candidate(path: str | Path | None) -> Path | None:
+    if not path:
+        return None
+    candidate = Path(path).expanduser()
+    if is_siyuan_workspace(candidate):
+        return candidate
+    if candidate.name.lower() in {"conf", "data", "repo"} and is_siyuan_workspace(candidate.parent):
+        return candidate.parent
+    return candidate
+
+
+def _candidate_home_workspaces() -> list[Path]:
+    home = Path.home()
+    return [
+        home / "Documents" / "SiYuan",
+        home / "SiYuan",
+        home / "siyuan",
+    ]
+
+
+def _candidate_drive_workspaces() -> list[Path]:
+    candidates: list[Path] = []
+    for letter in "CDEFGHIJKLMNOPQRSTUVWXYZ":
+        root = Path(f"{letter}:\\")
+        if not root.exists():
+            continue
+        for name in ["000_SIYUAN", "SiYuan", "siyuan"]:
+            candidates.append(root / name)
+    return candidates
+
+
+def discover_siyuan_workspace(configured: str | None = None) -> str:
+    candidates: list[str | Path] = []
+    if configured:
+        candidates.append(configured)
+    candidates.extend(os.environ.get(name, "") for name in WORKSPACE_ENV_VARS)
+    candidates.extend(WORKSPACE_CANDIDATE_DIRS)
+    candidates.extend(_candidate_home_workspaces())
+    candidates.extend(_candidate_drive_workspaces())
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = normalize_workspace_candidate(candidate)
+        if path is None:
+            continue
+        key = str(path).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        if is_siyuan_workspace(path):
+            return str(path)
+
+    return configured or DEFAULT_WORKSPACE
+
+
 def default_config() -> dict[str, Any]:
     return {
         "siyuan": {
@@ -80,7 +155,7 @@ def default_config() -> dict[str, Any]:
             "url": DEFAULT_URL,
             "urlAutoDetect": True,
             "lastWorkingUrl": "",
-            "workspacePath": DEFAULT_WORKSPACE,
+            "workspacePath": discover_siyuan_workspace(),
             "tokenSource": "env:SIYUAN_TOKEN",
             "notebookId": "",
             "autoCreateConceptPage": True,
@@ -101,6 +176,9 @@ def merge_defaults(config: dict[str, Any]) -> dict[str, Any]:
             merged[section].update(values)
         else:
             merged[section] = values
+    siyuan = merged.get("siyuan")
+    if isinstance(siyuan, dict):
+        siyuan["workspacePath"] = discover_siyuan_workspace(siyuan.get("workspacePath"))
     return merged
 
 
@@ -223,6 +301,7 @@ def open_client_from_config(
     diagnostics = {
         "candidateUrls": candidates,
         "kernelPids": sorted(siyuan_kernel_pids()),
+        "workspacePath": discover_siyuan_workspace(siyuan.get("workspacePath")),
         "tokenSource": siyuan.get("tokenSource", "env:SIYUAN_TOKEN"),
         "tokenAvailable": bool(token),
     }

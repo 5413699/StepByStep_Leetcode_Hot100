@@ -31,10 +31,20 @@ Do not edit `.sy` files directly.
 Local config path:
 
 ```text
-C:\Users\ADMIN\.codex\leetcode-hot100-workflow.local.json
+%USERPROFILE%\.codex\leetcode-hot100-workflow.local.json
 ```
 
 Token should come from `SIYUAN_TOKEN` by default. The actual URL may be auto-detected and written back to config:
+
+For first-run or new-machine setup, use `references/first-run-setup-flow.md` before attempting sync.
+
+Workspace path detection is runtime-first:
+
+1. Respect an existing configured `workspacePath` when it points to a valid SiYuan workspace directory.
+2. Try environment variables `SIYUAN_WORKSPACE`, `SIYUAN_WORKSPACE_PATH`, then `SIYUAN_DATA_DIR`.
+3. Try known local candidates, including `E:\000_SIYUAN`.
+4. Try common user and drive-level folders such as `%USERPROFILE%\Documents\SiYuan`, `%USERPROFILE%\SiYuan`, and `<drive>:\SiYuan`.
+5. A valid workspace must contain `conf`, `data`, and `repo` directories.
 
 ```json
 {
@@ -43,7 +53,7 @@ Token should come from `SIYUAN_TOKEN` by default. The actual URL may be auto-det
     "url": "http://127.0.0.1:6806",
     "urlAutoDetect": true,
     "lastWorkingUrl": "",
-    "workspacePath": "F:\\就业资料-陈智飞\\SiYuan_czf",
+    "workspacePath": "E:\\000_SIYUAN",
     "tokenSource": "env:SIYUAN_TOKEN",
     "notebookId": "",
     "autoCreateConceptPage": true,

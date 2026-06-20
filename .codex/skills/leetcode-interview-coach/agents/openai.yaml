@@ -1,4 +1,4 @@
 interface:
   display_name: "LeetCode Interview Coach"
-  short_description: "Train hand-coding, save final answers, and sync problem-scoped learning notes."
-  default_prompt: "Handle this LeetCode interview task in the Java project: scaffold if needed, coach me through the reasoning, integrate my final answer, extract only this problem's learning digest from our conversation, assess interview readiness, commit/push, and sync the learning record to SiYuan."
+  short_description: "Configure SiYuan, train hand-coding, and sync learning notes."
+  default_prompt: "Use $leetcode-interview-coach to configure this cloned Java LeetCode project if needed, coach the current problem, integrate my final answer, assess readiness, commit/push, and sync the learning record to SiYuan."

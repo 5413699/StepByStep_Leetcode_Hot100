@@ -1,6 +1,6 @@
 ---
 name: leetcode-interview-coach
-description: LeetCode interview hand-coding training system for this repository. Use when Codex needs to scaffold a Java LeetCode problem, coach the user through algorithm thinking, review or polish the user's solution, insert the final answer, extract a current-problem learning digest from the coaching conversation, update repository notes, commit and push, assess interview readiness, plan reviews, or sync the completed learning record into the user's SiYuan interview-prep wiki with concept backlinks and audit logs.
+description: LeetCode interview hand-coding training system for this repository. Use when Codex needs to scaffold a Java LeetCode problem, coach the user through algorithm thinking, review or polish the user's solution, insert the final answer, extract a current-problem learning digest from the coaching conversation, update repository notes, commit and push, assess interview readiness, plan reviews, configure first-run/new-machine SiYuan setup, or sync the completed learning record into the user's SiYuan interview-prep wiki with concept backlinks and audit logs.
 ---
 
 # LeetCode Interview Coach
@@ -8,6 +8,10 @@ description: LeetCode interview hand-coding training system for this repository.
 This is the only LeetCode interview-training entrypoint for this repository. The goal is not only storing solutions; it is helping the user quickly become able to independently hand-code interview problems. Route each request to the smallest independent module below. Load only the referenced file needed for the current task.
 
 ## Module Routing
+
+- **First-run or new-machine setup**: read `references/first-run-setup-flow.md`.
+  - Triggers: "首次运行", "换机器", "配置思源", "本机配置", "激活完整能力", "API Token", "workspacePath", cloned repository setup.
+  - Output: missing-information checklist, local config path, detected SiYuan workspace, API reachability, selected notebook, system root HPath, remaining blockers.
 
 - **Scaffold a problem**: read `references/scaffold-flow.md`.
   - Triggers: "添加这题", "创建结构", "scaffold", "新建题目", pasted problem statement with a request to add it.
