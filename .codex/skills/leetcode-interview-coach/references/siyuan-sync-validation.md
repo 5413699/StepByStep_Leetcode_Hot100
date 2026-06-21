@@ -48,6 +48,6 @@ All SiYuan body writes must use Python UTF-8 HTTP requests:
 json.dumps(payload, ensure_ascii=False).encode("utf-8")
 ```
 
-PowerShell may launch scripts and pass ASCII paths, but it must not construct Chinese page bodies.
+PowerShell may launch scripts and pass ASCII paths, but it must not construct Chinese page bodies. For generated closeout metadata, use `scripts/write_utf8_metadata.py` with `--source-dir` or `--field-file` inputs so the first JSON-building step also performs corruption checks.
 
 Before any write, scan the full sync payload, not only page titles and HPaths. Reject body fields, digest fields, readiness fields, and concept knowledge containing `????`, `�`, or visible mojibake. Plain English question marks in explanatory body text are allowed; question marks in titles, labels, tags, concepts, and HPaths are not.
