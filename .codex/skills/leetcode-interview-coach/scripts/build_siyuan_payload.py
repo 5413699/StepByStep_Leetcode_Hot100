@@ -19,6 +19,16 @@ def as_list(values: list[str] | None) -> list[str]:
     return [value for value in values or [] if value]
 
 
+def unique(values: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value and value not in seen:
+            result.append(value)
+            seen.add(value)
+    return result
+
+
 def first_text(*values: Any) -> str:
     for value in values:
         if value is None:
@@ -44,12 +54,14 @@ def main() -> int:
     parser.add_argument("--tag-plan-json")
     parser.add_argument("--readiness-json")
     parser.add_argument("--conversation-digest-json")
+    parser.add_argument("--function-usage-json")
     args = parser.parse_args()
 
     metadata = load_json(args.metadata_json, {})
     tag_plan = load_json(args.tag_plan_json, {})
     readiness = load_json(args.readiness_json, {})
     conversation_digest = load_json(args.conversation_digest_json, {})
+    function_usage = load_json(args.function_usage_json, {})
 
     problem_title = args.problem_title or metadata.get("problemTitle", "")
     thinking = args.thinking or metadata.get("thinking", "")
@@ -65,6 +77,13 @@ def main() -> int:
         metadata.get("solutionJava"),
         metadata.get("solutionContent"),
     )
+    tags = dict(tag_plan.get("tags", {}))
+    function_common_tags = [
+        str(item.get("commonFunction") or "")
+        for item in function_usage.get("usages", [])
+        if isinstance(item, dict)
+    ]
+    tags["commonFunctions"] = unique(as_list(tags.get("commonFunctions", [])) + function_common_tags)
 
     payload = {
         "problemTitle": problem_title,
@@ -74,9 +93,10 @@ def main() -> int:
         "solutionJava": solution_java,
         "complexityMarkdown": args.complexity_markdown or metadata.get("complexityMarkdown", ""),
         "pitfalls": as_list(args.pitfall or metadata.get("pitfalls", [])),
-        "tags": tag_plan.get("tags", {}),
+        "tags": tags,
         "tagEvidence": tag_plan.get("tagEvidence", {}),
         "conceptKnowledge": tag_plan.get("conceptKnowledge", {}),
+        "functionUsages": function_usage.get("usages", []),
         "readiness": readiness,
         "conversationDigest": conversation_digest,
         "git": {

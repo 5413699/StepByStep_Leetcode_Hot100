@@ -65,6 +65,7 @@ Before a confirmed tag can create a new SiYuan concept page, it must have concre
 Use `commonFunctions` only when the user's notes or solution explicitly emphasize reusable Java API usage, for example:
 
 - `数组Array的常用函数`
+- `字符串String的常用函数`
 - `可变数组的常用函数`
 - `哈希映射hashmap的常用函数`
 - `队列Queue的常用函数`
@@ -73,6 +74,7 @@ Use `commonFunctions` only when the user's notes or solution explicitly emphasiz
 Normalize aliases before writing to SiYuan:
 
 - `Array`, `Arrays` -> `数组Array的常用函数`
+- `String`, `new String(char[])`, `char[] -> String` -> `字符串String的常用函数`
 - `ArrayList`, `List` -> `可变数组的常用函数`
 - `HashMap`, `Map` -> `哈希映射hashmap的常用函数`
 - `Queue`, `LinkedList` when used as a queue -> `队列Queue的常用函数`

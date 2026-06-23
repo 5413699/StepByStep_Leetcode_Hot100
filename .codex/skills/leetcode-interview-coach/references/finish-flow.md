@@ -26,19 +26,25 @@ Use this flow when the user has a final answer and wants repository completion. 
 5. Generate a tag plan using `tag-rules.md`.
    - If a confirmed tag lacks local concept knowledge, use `concept-knowledge-flow.md` to search reputable open references and add `conceptKnowledge` to the tag plan.
    - When checking whether a concept is already known in local scripts or notes, prefer fixed-string search (`rg -F "回溯" ...`) over broad regex alternation. Chinese tags and quoted strings are not regex problems; fixed-string search avoids accidental escaping failures.
-6. Generate a current-problem conversation digest using `conversation-digest-schema.md`.
+6. Detect and persist common Java function usage using `common-function-flow.md`.
+   - Run `scripts/update_common_function_notes.py` after the final solution is written.
+   - Add returned repository note paths to the same commit.
+   - Ensure `commonFunctions` tags include every detected function concept.
+   - Ensure the SiYuan payload includes `functionUsages`; common-function concept pages must be updated under `## 常见代码结构`, not only `## 来自题目的理解`.
+   - If a detected API maps to a concept missing local concept knowledge, generate high-quality concept knowledge first or stop before sync.
+7. Generate a current-problem conversation digest using `conversation-digest-schema.md`.
    - Include only the current problem's training process from the latest scaffold/coaching request to closeout.
    - Exclude previous problems, skill iteration, migration, SiYuan API troubleshooting, Git/environment work, and unrelated chat.
    - Write the digest to a UTF-8 JSON file and pass its path with `-ConversationDigestJson`.
    - Do not build Chinese JSON through PowerShell here-strings, pipes, inline command strings, or decoded Git branch output. Put Chinese fields in a UTF-8 metadata source directory, build JSON with `scripts/write_utf8_metadata.py`, and pass only file paths to PowerShell.
-7. Generate readiness assessment using `interview-readiness-flow.md`.
-8. Run `mvn -q -DskipTests compile`.
+8. Generate readiness assessment using `interview-readiness-flow.md`.
+9. Run `mvn -q -DskipTests compile`.
    - If a runnable sample is needed, invoke `"$env:JAVA_HOME\bin\java.exe"` explicitly. Do not treat a bare `java` crash as a solution failure until `where.exe java` and `JAVA_HOME` have been checked.
-9. Stage only current problem files.
+10. Stage only current problem files and generated common-function notes.
    - Invoke scripts in the current PowerShell session with an argument array. Do not launch a nested `powershell -File` process for closeout.
    - Put Chinese long text in UTF-8 metadata files and pass file paths. Use `scripts/write_utf8_metadata.py` to create `-WorkflowMetadataJson` for full closeout or `-CommitMetadataJson` for commit-only closeout.
    - The finish script uses `git -c core.quotePath=false status --porcelain=v1` internally, so callers should not rely on global Git `core.quotePath` settings when Chinese paths are present.
-10. Commit through `finish_problem.ps1`; it writes the commit message to a temporary UTF-8 file and runs `git commit -F`, then pushes the current branch. Do not create or amend Chinese commit messages manually through `git commit -m`.
+11. Commit through `finish_problem.ps1`; it writes the commit message to a temporary UTF-8 file and runs `git commit -F`, then pushes the current branch. Do not create or amend Chinese commit messages manually through `git commit -m`.
 
 ```text
 <problem title>
@@ -48,8 +54,8 @@ Use this flow when the user has a final answer and wants repository completion. 
 Codex 于 <yyyy-MM-dd HH:mm zzz> 提交
 ```
 
-11. Push current branch.
-12. If SiYuan is enabled, run `scripts/sync_leetcode_to_siyuan.py --dry-run` before the real write. `finish_leetcode_workflow.ps1` does this automatically.
+12. Push current branch.
+13. If SiYuan is enabled, run `scripts/sync_leetcode_to_siyuan.py --dry-run` before the real write. `finish_leetcode_workflow.ps1` does this automatically.
     - Concept pages may also receive compact `教练摘要` entries derived from the conversation digest. These entries are for future coach-memory retrieval and must stay short, deduped, and problem-linked.
     - Before dry-run, verify the generated sync payload has non-empty `solutionJava`; an empty `solutionJava` must fail instead of creating an empty `最终题解` section.
 13. Validate SiYuan current-block kramdown using `siyuan-sync-validation.md`; never use exported full Markdown for write-back or required-text validation.

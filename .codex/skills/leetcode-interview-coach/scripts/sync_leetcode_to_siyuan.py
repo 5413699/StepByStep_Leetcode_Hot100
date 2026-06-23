@@ -278,7 +278,13 @@ CONCEPT_INTROS = {
         "intro": "Java 数组是定长连续容器，面试中常配合 Arrays 工具类完成排序、填充、拷贝和字符串化调试。",
         "signals": ["代码中使用 int[]、char[] 或二维数组", "需要排序、初始化默认值或复制区间", "需要输出数组内容辅助验证"],
         "pitfalls": ["Arrays.copyOfRange 右边界是开区间", "二维数组 fill 不能一次填满所有行", "Arrays.asList 处理基本类型数组会得到单个元素"],
-        "template": ["Arrays.sort(nums);", "Arrays.fill(dp, INF);", "int[] part = Arrays.copyOfRange(nums, l, r);"],
+        "template": ["Arrays.sort(nums);", "Arrays.fill(dp, INF);", "Arrays.fill(board[i], '.');", "int[] part = Arrays.copyOfRange(nums, l, r);"],
+    },
+    "字符串String的常用函数": {
+        "intro": "String 是 Java 中不可变的字符序列，面试中常用来读取字符、截取子串、构造答案字符串和比较内容。",
+        "signals": ["代码中使用 String 或 char[]", "需要从字符数组构造答案", "需要处理子串、字符访问或字符串比较"],
+        "pitfalls": ["字符串比较要用 equals 而不是 ==", "substring 右边界是开区间", "从 char[] 构造 String 时要确认数组内容已经是当前快照"],
+        "template": ["char c = s.charAt(i);", "String part = s.substring(left, right);", "String row = new String(board[i]);"],
     },
     "可变数组的常用函数": {
         "intro": "ArrayList 适合保存数量不固定的结果，常用 add、get、set、remove 和 size 组合构造答案。",
@@ -446,6 +452,21 @@ def concept_update_notes(payload: dict[str, Any], tag_data: dict[str, list[str]]
         result.setdefault(concept, [])
         result[concept].append(item["note"])
     return {key: unique(value) for key, value in result.items()}
+
+
+def function_usages(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for item in payload.get("functionUsages") or []:
+        if isinstance(item, dict) and as_text(item.get("functionName")) and as_text(item.get("commonFunction")):
+            result.append(item)
+    return result
+
+
+def function_usages_by_concept(payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    result: dict[str, list[dict[str, Any]]] = {}
+    for item in function_usages(payload):
+        result.setdefault(as_text(item.get("commonFunction")), []).append(item)
+    return result
 
 
 def concept_knowledge(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -802,6 +823,28 @@ def append_unique_coach_memory(markdown: str, problem_id: str, title: str, note:
     trimmed = "\n".join(bullets[:limit]).strip()
     replacement = header + ("\n" + trimmed + "\n\n" if trimmed else "\n")
     return updated[: match.start()] + replacement + updated[match.end() :]
+
+
+def append_unique_code_structure(markdown: str, problem_id: str, title: str, usage: dict[str, Any]) -> str:
+    function_name = as_text(usage.get("functionName"))
+    example_title = as_text(usage.get("exampleTitle")) or function_name
+    example_code = as_text(usage.get("exampleCode"))
+    summary = as_text(usage.get("summary"))
+    if not function_name or not example_code:
+        return markdown
+    line = "\n".join(
+        [
+            f"### {function_name}：{example_title}",
+            "",
+            f"- 来源题目：{problem_ref(problem_id, title)}",
+            f"- 用法：{summary}",
+            "",
+            "```java",
+            example_code.rstrip(),
+            "```",
+        ]
+    )
+    return append_unique_under_heading(markdown, "常见代码结构", line, function_name, example_code)
 
 
 def concept_markdown(name: str, category: str, problem_id: str, title: str, preset: dict[str, Any]) -> str:
@@ -1198,6 +1241,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     concept_refs: dict[str, str] = {}
     learning_notes = concept_update_notes(payload, tag_data)
     coach_notes = coach_memory_notes(payload, tag_data)
+    usage_notes = function_usages_by_concept(payload)
     concept_results = []
     category_results: dict[str, dict[str, Any]] = {}
     for category, name, hpath in concept_targets:
@@ -1211,6 +1255,8 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
             updated = append_unique_learning_note(updated, problem_id, title, note)
         for note in coach_notes.get(name, []):
             updated = append_unique_coach_memory(updated, problem_id, title, note)
+        for usage in usage_notes.get(name, []):
+            updated = append_unique_code_structure(updated, problem_id, title, usage)
         if updated != existing:
             update_doc(client, cid, updated)
         concept_results.append({"name": name, "category": category, "id": cid, "url": f"siyuan://blocks/{cid}", "created": created})
@@ -1297,6 +1343,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     for item in concept_results:
         content = own_doc_markdown(client, item["id"])
         required = [title] + learning_notes.get(item["name"], []) + coach_notes.get(item["name"], [])
+        required.extend(as_text(usage.get("functionName")) for usage in usage_notes.get(item["name"], []))
         validation_errors.extend(validate_page(content, required, f"concept:{item['name']}"))
     for item in category_results.values():
         content = own_doc_markdown(client, item["id"])

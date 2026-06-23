@@ -129,6 +129,36 @@ if ($NoteContent) {
 }
 
 $finishScript = Join-Path $scriptDir "finish_problem.ps1"
+$functionUsagePath = Join-Path $env:TEMP ("leetcode-function-usage-{0}.json" -f ([guid]::NewGuid().ToString("N")))
+$functionNotePaths = @()
+try {
+    $functionArgs = @(
+        (Join-Path $scriptDir "update_common_function_notes.py"),
+        "--java-path", $JavaPath,
+        "--problem-note", $NotePath,
+        "--output-json", $functionUsagePath
+    )
+    if ($WorkflowMetadataJson) {
+        $functionArgs += @("--workflow-metadata-json", $WorkflowMetadataJson)
+    }
+    if ($ProblemTitle) {
+        $functionArgs += @("--problem-title", $ProblemTitle)
+    }
+    & python @functionArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to update common-function notes."
+    }
+    $functionUsage = Read-Utf8JsonObject -Path $functionUsagePath
+    if ($functionUsage.updatedPaths) {
+        $functionNotePaths = @($functionUsage.updatedPaths | ForEach-Object { [string]$_ })
+    }
+} catch {
+    if (Test-Path -LiteralPath $functionUsagePath) {
+        Remove-Item -LiteralPath $functionUsagePath -Force
+    }
+    throw
+}
+
 $commitMetadataPath = Join-Path $env:TEMP ("leetcode-commit-metadata-{0}.json" -f ([guid]::NewGuid().ToString("N")))
 Write-Utf8Json -Path $commitMetadataPath -Value ([pscustomobject]@{
     problemTitle = $ProblemTitle
@@ -137,6 +167,7 @@ Write-Utf8Json -Path $commitMetadataPath -Value ([pscustomobject]@{
 $finishArgs = @{
     JavaPath = $JavaPath
     NotePath = $NotePath
+    Paths = $functionNotePaths
     CommitMetadataJson = $commitMetadataPath
 }
 if ($NoPush) {
@@ -183,6 +214,9 @@ if (-not $SkipSiyuan) {
         if ($ConversationDigestJson) {
             $payloadArgs += @("--conversation-digest-json", $ConversationDigestJson)
         }
+        if (Test-Path -LiteralPath $functionUsagePath) {
+            $payloadArgs += @("--function-usage-json", $functionUsagePath)
+        }
         try {
             & python @payloadArgs
         } finally {
@@ -208,6 +242,10 @@ if (-not $SkipSiyuan) {
         throw "SiYuan sync failed after Git completion:`n$($syncOutput -join "`n")"
     }
     $syncResult = $syncOutput -join "`n"
+}
+
+if (Test-Path -LiteralPath $functionUsagePath) {
+    Remove-Item -LiteralPath $functionUsagePath -Force
 }
 
 [pscustomobject]@{

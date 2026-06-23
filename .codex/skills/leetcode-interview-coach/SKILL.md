@@ -61,6 +61,10 @@ This is the only LeetCode interview-training entrypoint for this repository. The
   - Use when a confirmed tag is not already backed by local concept knowledge or when creating a new SiYuan concept page.
   - Output: concrete `conceptKnowledge` with intro, recognition signals, code shape, pitfalls, and source evidence; never generic filler.
 
+- **Update common function knowledge**: read `references/common-function-flow.md`.
+  - Use inside finish flow when the final Java solution uses reusable Java APIs such as `Arrays.fill(...)` or `new String(char[])`.
+  - Output: repository common-function notes, confirmed common-function tags, and SiYuan `## 常见代码结构` examples.
+
 - **Migrate legacy SiYuan notes**: use the separate `leetcode-siyuan-migrator` skill.
   - Triggers: "迁移旧笔记", "整理已有思源体系", "把旧分类迁到新系统".
   - This main skill must not perform batch migration during normal finish flow.
@@ -95,12 +99,13 @@ When the user reaches a final answer:
 2. Replace only the marked LeetCode solution region.
 3. Update only the intended repository note region.
 4. Generate a tag plan with evidence.
-5. Generate or verify concept knowledge for every confirmed tag. Use local knowledge first; if missing, search reputable open references when network is available and create structured `conceptKnowledge`.
-6. Generate a current-problem conversation digest. Include only the interaction about this problem from scaffold/coaching to closeout; exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
-7. Generate an interview-readiness assessment and review labels.
-8. Run `mvn -q -DskipTests compile`.
-9. Commit and push through the bundled finish script, using `scripts/write_utf8_metadata.py` or an existing UTF-8 JSON file when Chinese text is involved.
-10. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate current-block Markdown, and report failure without rolling back Git.
+5. Detect reusable Java API usage with `references/common-function-flow.md`. Add confirmed common-function tags, update repository notes under `src/notes/03.常用函数`, and ensure SiYuan common-function concept pages receive concrete examples under `## 常见代码结构`.
+6. Generate or verify concept knowledge for every confirmed tag. Use local knowledge first; if missing, search reputable open references when network is available and create structured `conceptKnowledge`.
+7. Generate a current-problem conversation digest. Include only the interaction about this problem from scaffold/coaching to closeout; exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
+8. Generate an interview-readiness assessment and review labels.
+9. Run `mvn -q -DskipTests compile`.
+10. Commit and push through the bundled finish script, using `scripts/write_utf8_metadata.py` or an existing UTF-8 JSON file when Chinese text is involved.
+11. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate current-block Markdown, and report failure without rolling back Git.
 
 ## User-Facing Closeout
 
