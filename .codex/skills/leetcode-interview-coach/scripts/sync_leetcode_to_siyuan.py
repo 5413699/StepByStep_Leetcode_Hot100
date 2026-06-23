@@ -1276,12 +1276,15 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     validation_errors: list[str] = []
     problem_content = own_doc_markdown(client, problem_id)
     problem_blocks_content = doc_blocks_markdown(client, problem_id)
+    problem_validation_content = "\n\n".join(
+        part for part in [problem_content, problem_blocks_content] if part
+    )
     digest_required: list[str] = []
     if digest_has_content(digest):
         digest_required.extend(["第一反应", "卡壳点", "关键突破", "面试表达", "复习建议"])
     validation_errors.extend(
         validate_page(
-            problem_blocks_content or problem_content,
+            problem_validation_content,
             ["面试版思路", "最终题解", "掌握状态", sanitized_git(payload).get("commit", "")] + digest_required,
             "problem",
         )
@@ -1290,7 +1293,7 @@ def sync(payload_path: Path, config_path: Path, *, dry_run: bool = False) -> dic
     if not solution_lines:
         validation_errors.append("problem: solutionJava has no verifiable code lines")
     else:
-        validation_errors.extend(validate_page(problem_blocks_content, solution_lines, "problem:solution"))
+        validation_errors.extend(validate_page(problem_validation_content, solution_lines, "problem:solution"))
     for item in concept_results:
         content = own_doc_markdown(client, item["id"])
         required = [title] + learning_notes.get(item["name"], []) + coach_notes.get(item["name"], [])
