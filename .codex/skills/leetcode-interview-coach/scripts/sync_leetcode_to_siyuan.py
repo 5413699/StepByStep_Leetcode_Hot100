@@ -93,6 +93,7 @@ TAG_ALIASES = {
         "List": "可变数组的常用函数",
         "HashMap": "哈希映射hashmap的常用函数",
         "Map": "哈希映射hashmap的常用函数",
+        "Stack": "栈Stack的常用函数",
         "Queue": "队列Queue的常用函数",
         "LinkedList": "队列Queue的常用函数",
     }
@@ -303,6 +304,12 @@ CONCEPT_INTROS = {
         "signals": ["代码需要先进先出处理", "BFS 层序扩展", "状态要按到达顺序处理"],
         "pitfalls": ["poll 可能返回 null", "使用 queue.size() 时没有先固定层大小", "LinkedList 可存 null 但 BFS 队列不应放 null 状态"],
         "template": ["Queue<int[]> queue = new LinkedList<>();", "queue.offer(new int[]{i, j});", "int[] cur = queue.poll();"],
+    },
+    "栈Stack的常用函数": {
+        "intro": "Stack 常用于后进先出的状态维护，面试中常见操作是 push 压栈、pop 弹栈、peek 查看栈顶和 isEmpty 判空。",
+        "signals": ["代码中使用 Stack", "需要访问最近加入的元素", "需要用辅助栈保存额外状态"],
+        "pitfalls": ["空栈时调用 peek 或 pop 会抛异常", "peek 不删除元素而 pop 会删除元素", "辅助栈和主栈 push/pop 不同步会导致状态错位"],
+        "template": ["Stack<Integer> stack = new Stack<>();", "stack.push(x);", "int top = stack.peek();", "stack.pop();"],
     },
     "Collections的常用函数": {
         "intro": "Collections 提供对 List 等集合的排序、反转、最大最小值和二分查找，适合处理对象集合而不是基本类型数组。",

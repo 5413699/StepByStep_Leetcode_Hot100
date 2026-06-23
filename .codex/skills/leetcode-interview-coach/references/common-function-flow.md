@@ -39,6 +39,7 @@ src/notes/03.常用函数/
   03.集合Collection/
   04.哈希Map/
   05.队列Queue/
+  06.栈Stack/
 ```
 
 Each function note should contain:

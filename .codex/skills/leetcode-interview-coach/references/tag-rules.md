@@ -68,6 +68,7 @@ Use `commonFunctions` only when the user's notes or solution explicitly emphasiz
 - `字符串String的常用函数`
 - `可变数组的常用函数`
 - `哈希映射hashmap的常用函数`
+- `栈Stack的常用函数`
 - `队列Queue的常用函数`
 - `Collections的常用函数`
 
@@ -77,6 +78,7 @@ Normalize aliases before writing to SiYuan:
 - `String`, `new String(char[])`, `char[] -> String` -> `字符串String的常用函数`
 - `ArrayList`, `List` -> `可变数组的常用函数`
 - `HashMap`, `Map` -> `哈希映射hashmap的常用函数`
+- `Stack` -> `栈Stack的常用函数`
 - `Queue`, `LinkedList` when used as a queue -> `队列Queue的常用函数`
 
 ## Evidence Rules

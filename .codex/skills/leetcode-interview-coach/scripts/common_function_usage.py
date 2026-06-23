@@ -65,6 +65,34 @@ FUNCTION_DEFINITIONS: list[dict[str, Any]] = [
         ],
         "patterns": [r"\bnew\s+String\s*\(\s*[^)]*\[\s*[^)]*\]\s*\)", r"\bnew\s+String\s*\(\s*[A-Za-z_][A-Za-z0-9_]*\s*\)"],
     },
+    {
+        "id": "stack-basic-methods",
+        "functionName": "Stack.push/pop/peek/isEmpty",
+        "commonFunction": "栈Stack的常用函数",
+        "notePath": "src/notes/03.常用函数/06.栈Stack/Stack常用方法.md",
+        "signature": "Stack<E>.push(E item) / pop() / peek() / isEmpty()",
+        "summary": "使用 Java `Stack` 完成后进先出的压栈、弹栈、查看栈顶和判空操作，常用于括号匹配、辅助栈、单调栈等题型。",
+        "whenToUse": [
+            "需要维护后进先出的状态",
+            "需要查看或删除最近加入的元素",
+            "需要用辅助栈同步保存额外状态，例如当前最小值",
+        ],
+        "exampleTitle": "最小栈中的普通栈和辅助栈同步维护",
+        "exampleCode": "Stack<Integer> stack = new Stack<>();\nStack<Integer> minStack = new Stack<>();\n\nstack.push(val);\nif (minStack.isEmpty()) {\n    minStack.push(val);\n} else {\n    minStack.push(Math.min(val, minStack.peek()));\n}",
+        "pitfalls": [
+            "空栈时调用 `peek()` 或 `pop()` 会抛异常，第一次使用前要先判空",
+            "`peek()` 只查看栈顶，不会删除元素；`pop()` 会删除并返回栈顶元素",
+            "辅助栈需要和主栈同步 push/pop，否则状态会错位",
+        ],
+        "sources": [
+            {
+                "label": "Oracle Java Stack API",
+                "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Stack.html",
+                "note": "官方文档说明 `Stack` 表示 LIFO 栈，并提供 `push`、`pop`、`peek`、`empty` 等栈操作；`isEmpty` 来自其集合父类体系。",
+            }
+        ],
+        "patterns": [r"\bimport\s+java\.util\.Stack\s*;", r"\bStack\s*<[^>]+>\s+[A-Za-z_][A-Za-z0-9_]*", r"\bnew\s+Stack\s*<"],
+    },
 ]
 
 
