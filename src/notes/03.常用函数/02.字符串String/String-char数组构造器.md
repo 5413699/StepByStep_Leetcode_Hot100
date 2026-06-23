@@ -1,6 +1,6 @@
-<!-- codex-common-function-start -->
-
 # new String(char[])
+
+<!-- codex-common-function-start -->
 
 ## 简介
 

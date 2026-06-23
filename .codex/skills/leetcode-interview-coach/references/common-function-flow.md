@@ -51,6 +51,7 @@ Each function note should contain:
 - 来源依据
 
 Use `<!-- codex-common-function-start -->` and `<!-- codex-common-function-end -->` in repository notes so generated content can be updated without destroying user-written additions outside the marked region.
+Keep the visible Markdown clean: the first visible line must be `# <function name>`, and the generated markers should wrap the body sections below the title, not the title itself.
 
 ## SiYuan Concept Pages
 

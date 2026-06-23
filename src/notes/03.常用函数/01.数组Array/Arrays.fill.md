@@ -1,6 +1,6 @@
-<!-- codex-common-function-start -->
-
 # Arrays.fill
+
+<!-- codex-common-function-start -->
 
 ## 简介
 

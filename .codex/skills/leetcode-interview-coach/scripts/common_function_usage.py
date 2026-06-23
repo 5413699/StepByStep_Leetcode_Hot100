@@ -98,17 +98,19 @@ def common_function_tags(solution_java: str) -> list[str]:
     return common_function_tags_from_usages(detect_function_usages(solution_java))
 
 
-def append_generated_region(existing: str, generated: str) -> str:
+def append_generated_region(existing: str, title: str, generated: str) -> str:
     start = "<!-- codex-common-function-start -->"
     end = "<!-- codex-common-function-end -->"
     region = f"{start}\n\n{generated.strip()}\n\n{end}"
     if start in existing and end in existing:
         before = existing[: existing.index(start)].rstrip()
         after = existing[existing.index(end) + len(end) :].lstrip()
+        if not before.strip():
+            before = title
         return (before + "\n\n" + region + ("\n\n" + after if after else "")).strip() + "\n"
     if existing.strip():
         return existing.rstrip() + "\n\n" + region + "\n"
-    return region + "\n"
+    return title.rstrip() + "\n\n" + region + "\n"
 
 
 def extract_existing_problem_records(existing: str) -> list[str]:
@@ -131,12 +133,12 @@ def render_function_note(usage: dict[str, Any], existing: str = "") -> str:
     elif problem_title:
         problem_line = f"- {problem_title}：{usage['summary']}"
     else:
-        problem_line = "- 暂无题目使用记录。"
-    records = unique(extract_existing_problem_records(existing) + [problem_line])
+        problem_line = ""
+    records = unique(extract_existing_problem_records(existing) + ([problem_line] if problem_line else []))
+    if not records:
+        records = ["- 暂无题目使用记录。"]
     generated = "\n".join(
         [
-            f"# {usage['functionName']}",
-            "",
             "## 简介",
             "",
             str(usage["summary"]),
@@ -170,7 +172,7 @@ def render_function_note(usage: dict[str, Any], existing: str = "") -> str:
             ],
         ]
     )
-    return append_generated_region(existing, generated)
+    return append_generated_region(existing, f"# {usage['functionName']}", generated)
 
 
 def note_path_for_usage(repo_root: Path, usage: dict[str, Any]) -> Path:
