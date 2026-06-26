@@ -17,6 +17,7 @@ Detect concrete API usage from the final Java solution and the conversation dige
 
 - `Arrays.fill(...)` -> `数组Array的常用函数`
 - `new String(char[])` / `new String(board[i])` -> `字符串String的常用函数`
+- `Stack<...>` / `new Stack<>()` -> `栈Stack的常用函数`
 
 When adding a new detection, include:
 

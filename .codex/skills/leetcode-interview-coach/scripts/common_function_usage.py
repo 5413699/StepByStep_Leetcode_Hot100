@@ -112,6 +112,17 @@ def detect_function_usages(solution_java: str, *, problem_title: str = "", probl
         if not any(re.search(pattern, solution_java) for pattern in definition["patterns"]):
             continue
         usage = {key: value for key, value in definition.items() if key != "patterns"}
+        if usage.get("id") == "stack-basic-methods" and "decodeString" in solution_java:
+            usage["exampleTitle"] = "字符串解码中保存括号层状态"
+            usage["exampleCode"] = (
+                "Stack<Integer> countStack = new Stack<>();\n"
+                "Stack<StringBuilder> stringStack = new Stack<>();\n\n"
+                "countStack.push(num);\n"
+                "stringStack.push(cur);\n\n"
+                "int repeatNum = countStack.pop();\n"
+                "StringBuilder prev = stringStack.pop();"
+            )
+            usage["summary"] = "使用 Java `Stack` 保存进入括号前的重复次数和上一层字符串，遇到右括号时再弹出状态并合并当前层结果。"
         usage["problemTitle"] = problem_title
         usage["problemNotePath"] = problem_note_path
         usages.append(usage)
@@ -162,7 +173,13 @@ def render_function_note(usage: dict[str, Any], existing: str = "") -> str:
         problem_line = f"- {problem_title}：{usage['summary']}"
     else:
         problem_line = ""
-    records = unique(extract_existing_problem_records(existing) + ([problem_line] if problem_line else []))
+    existing_records = extract_existing_problem_records(existing)
+    if problem_title:
+        existing_records = [
+            record for record in existing_records
+            if not record.startswith(f"- {problem_title}：")
+        ]
+    records = unique(existing_records + ([problem_line] if problem_line else []))
     if not records:
         records = ["- 暂无题目使用记录。"]
     generated = "\n".join(

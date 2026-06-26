@@ -4,7 +4,7 @@
 
 ## 简介
 
-使用 Java `Stack` 完成后进先出的压栈、弹栈、查看栈顶和判空操作，常用于括号匹配、辅助栈、单调栈等题型。
+使用 Java `Stack` 保存进入括号前的重复次数和上一层字符串，遇到右括号时再弹出状态并合并当前层结果。
 
 ## 什么时候用
 
@@ -14,18 +14,17 @@
 
 ## 常见代码结构
 
-### 最小栈中的普通栈和辅助栈同步维护
+### 字符串解码中保存括号层状态
 
 ```java
-Stack<Integer> stack = new Stack<>();
-Stack<Integer> minStack = new Stack<>();
+Stack<Integer> countStack = new Stack<>();
+Stack<StringBuilder> stringStack = new Stack<>();
 
-stack.push(val);
-if (minStack.isEmpty()) {
-    minStack.push(val);
-} else {
-    minStack.push(Math.min(val, minStack.peek()));
-}
+countStack.push(num);
+stringStack.push(cur);
+
+int repeatNum = countStack.pop();
+StringBuilder prev = stringStack.pop();
 ```
 
 ## 易错点
@@ -37,6 +36,7 @@ if (minStack.isEmpty()) {
 ## 题目使用记录
 
 - M155-最小栈：使用 Java `Stack` 完成后进先出的压栈、弹栈、查看栈顶和判空操作，常用于括号匹配、辅助栈、单调栈等题型。（题目笔记：`src/notes/01.按数据结构分类/06.栈/M155_最小栈.md`）
+- M394-字符串解码：使用 Java `Stack` 保存进入括号前的重复次数和上一层字符串，遇到右括号时再弹出状态并合并当前层结果。（题目笔记：`src/notes/01.按数据结构分类/06.栈/M394_字符串解码.md`）
 
 ## 来源依据
 
