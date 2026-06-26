@@ -36,7 +36,7 @@ def parse_assignment(value: str) -> tuple[str, str]:
 
 
 def read_utf8(path: str) -> str:
-    return Path(path).read_text(encoding="utf-8")
+    return Path(path).read_text(encoding="utf-8-sig")
 
 
 def load_json(path: str) -> dict[str, Any]:
@@ -142,6 +142,24 @@ def main() -> int:
         default=[],
         help="key=path; read a UTF-8 JSON value from the file.",
     )
+    parser.add_argument(
+        "--set-field",
+        action="append",
+        default=[],
+        help="ASCII-only key=value override; intended for generated ASCII fields such as commit hashes.",
+    )
+    parser.add_argument(
+        "--set-field-file",
+        action="append",
+        default=[],
+        help="key=path; override the field with strict UTF-8 text read from a file.",
+    )
+    parser.add_argument(
+        "--set-json-field-file",
+        action="append",
+        default=[],
+        help="key=path; override the field with a UTF-8 JSON value read from a file.",
+    )
     parser.add_argument("--require", action="append", default=[])
     args = parser.parse_args()
 
@@ -163,6 +181,19 @@ def main() -> int:
         payload[key] = [line for line in read_utf8(path).splitlines() if line.strip()]
 
     for assignment in args.json_field_file:
+        key, path = parse_assignment(assignment)
+        payload[key] = json.loads(read_utf8(path))
+
+    for assignment in args.set_field:
+        key, value = parse_assignment(assignment)
+        ensure_cli_value_is_ascii(key, value)
+        payload[key] = value
+
+    for assignment in args.set_field_file:
+        key, path = parse_assignment(assignment)
+        payload[key] = read_utf8(path)
+
+    for assignment in args.set_json_field_file:
         key, path = parse_assignment(assignment)
         payload[key] = json.loads(read_utf8(path))
 

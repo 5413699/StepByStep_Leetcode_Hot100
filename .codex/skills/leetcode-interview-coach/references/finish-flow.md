@@ -43,6 +43,7 @@ Use this flow when the user has a final answer and wants repository completion. 
 10. Stage only current problem files and generated common-function notes.
    - Invoke scripts in the current PowerShell session with an argument array. Do not launch a nested `powershell -File` process for closeout.
    - Put Chinese long text in UTF-8 metadata files and pass file paths. Use `scripts/write_utf8_metadata.py` to create `-WorkflowMetadataJson` for full closeout or `-CommitMetadataJson` for commit-only closeout.
+   - Do not patch metadata JSON with PowerShell `Set-Content -Encoding UTF8`, `Out-File`, redirection, here-strings, or pipelines. On Windows PowerShell these can introduce a UTF-8 BOM or console transcoding. If a generated field such as `commit` must be added after Git commit, call `write_utf8_metadata.py --base-json <old> --set-field commit=<hash> --output <new>` and then use the new file.
    - The finish script uses `git -c core.quotePath=false status --porcelain=v1` internally, so callers should not rely on global Git `core.quotePath` settings when Chinese paths are present.
 11. Commit through `finish_problem.ps1`; it writes the commit message to a temporary UTF-8 file and runs `git commit -F`, then pushes the current branch. Do not create or amend Chinese commit messages manually through `git commit -m`.
 
@@ -132,8 +133,11 @@ If an existing UTF-8 metadata JSON already exists, validate and normalize it bef
 python .codex\skills\leetcode-interview-coach\scripts\write_utf8_metadata.py `
   --kind workflow `
   --base-json "<existing metadata json>" `
+  --set-field commit="<ascii commit hash>" `
   --output $workflowMetadataPath
 ```
+
+`write_utf8_metadata.py` reads existing JSON with `utf-8-sig` and always writes UTF-8 without BOM. Use it as the only metadata normalizer; never use PowerShell text writers for metadata JSON.
 
 Do not call child PowerShell scripts through a nested `powershell -File` process when passing multi-line Chinese strings or arrays. Prefer invoking bundled scripts in the current session with `& $script @args`, or pass UTF-8 JSON/file paths.
 
