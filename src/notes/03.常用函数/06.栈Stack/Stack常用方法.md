@@ -4,7 +4,7 @@
 
 ## 简介
 
-使用 Java `Stack` 保存进入括号前的重复次数和上一层字符串，遇到右括号时再弹出状态并合并当前层结果。
+使用 Java `Stack` 保存还没有找到更高温度的日期下标，当前温度更高时连续弹出并填写等待天数。
 
 ## 什么时候用
 
@@ -14,17 +14,16 @@
 
 ## 常见代码结构
 
-### 字符串解码中保存括号层状态
+### 每日温度中保存未解决日期下标
 
 ```java
-Stack<Integer> countStack = new Stack<>();
-Stack<StringBuilder> stringStack = new Stack<>();
+Stack<Integer> indexStack = new Stack<>();
 
-countStack.push(num);
-stringStack.push(cur);
-
-int repeatNum = countStack.pop();
-StringBuilder prev = stringStack.pop();
+while (!indexStack.isEmpty() && temperatures[i] > temperatures[indexStack.peek()]) {
+    int prevIndex = indexStack.pop();
+    answer[prevIndex] = i - prevIndex;
+}
+indexStack.push(i);
 ```
 
 ## 易错点
@@ -37,6 +36,7 @@ StringBuilder prev = stringStack.pop();
 
 - M155-最小栈：使用 Java `Stack` 完成后进先出的压栈、弹栈、查看栈顶和判空操作，常用于括号匹配、辅助栈、单调栈等题型。（题目笔记：`src/notes/01.按数据结构分类/06.栈/M155_最小栈.md`）
 - M394-字符串解码：使用 Java `Stack` 保存进入括号前的重复次数和上一层字符串，遇到右括号时再弹出状态并合并当前层结果。（题目笔记：`src/notes/01.按数据结构分类/06.栈/M394_字符串解码.md`）
+- M739-每日温度：使用 Java `Stack` 保存还没有找到更高温度的日期下标，当前温度更高时连续弹出并填写等待天数。（题目笔记：`src/notes/01.按数据结构分类/06.栈/M739_每日温度.md`）
 
 ## 来源依据
 

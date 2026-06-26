@@ -123,6 +123,17 @@ def detect_function_usages(solution_java: str, *, problem_title: str = "", probl
                 "StringBuilder prev = stringStack.pop();"
             )
             usage["summary"] = "使用 Java `Stack` 保存进入括号前的重复次数和上一层字符串，遇到右括号时再弹出状态并合并当前层结果。"
+        elif usage.get("id") == "stack-basic-methods" and "dailyTemperatures" in solution_java:
+            usage["exampleTitle"] = "每日温度中保存未解决日期下标"
+            usage["exampleCode"] = (
+                "Stack<Integer> indexStack = new Stack<>();\n\n"
+                "while (!indexStack.isEmpty() && temperatures[i] > temperatures[indexStack.peek()]) {\n"
+                "    int prevIndex = indexStack.pop();\n"
+                "    answer[prevIndex] = i - prevIndex;\n"
+                "}\n"
+                "indexStack.push(i);"
+            )
+            usage["summary"] = "使用 Java `Stack` 保存还没有找到更高温度的日期下标，当前温度更高时连续弹出并填写等待天数。"
         usage["problemTitle"] = problem_title
         usage["problemNotePath"] = problem_note_path
         usages.append(usage)
