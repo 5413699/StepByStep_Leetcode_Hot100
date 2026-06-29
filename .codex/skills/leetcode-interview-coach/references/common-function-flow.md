@@ -16,6 +16,7 @@ Do not only mention the function in the problem note. A function is reusable kno
 Detect concrete API usage from the final Java solution and the conversation digest. Current built-in detections include:
 
 - `Arrays.fill(...)` -> `数组Array的常用函数`
+- `System.arraycopy(...)` -> `数组Array的常用函数`
 - `new String(char[])` / `new String(board[i])` -> `字符串String的常用函数`
 - `Stack<...>` / `new Stack<>()` -> `栈Stack的常用函数`
 

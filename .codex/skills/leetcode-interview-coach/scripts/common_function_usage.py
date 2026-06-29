@@ -38,6 +38,35 @@ FUNCTION_DEFINITIONS: list[dict[str, Any]] = [
         "patterns": [r"\bArrays\s*\.\s*fill\s*\("],
     },
     {
+        "id": "system-arraycopy",
+        "functionName": "System.arraycopy",
+        "commonFunction": "数组Array的常用函数",
+        "notePath": "src/notes/03.常用函数/01.数组Array/System.arraycopy.md",
+        "signature": "System.arraycopy(Object src, int srcPos, Object dest, int destPos, int length)",
+        "summary": "把源数组中一段连续元素复制到目标数组的指定位置，常用于构造带哨兵的新数组或移动数组片段。",
+        "whenToUse": [
+            "需要把原数组整体或部分复制到另一个数组中",
+            "需要在新数组前后预留哨兵、空位或扩容空间",
+            "需要比手写 for 循环更直接地表达连续区间复制",
+        ],
+        "exampleTitle": "把原数组复制到带左右哨兵的新数组中",
+        "exampleCode": "int[] barChart = new int[heights.length + 2];\nSystem.arraycopy(heights, 0, barChart, 1, heights.length);",
+        "pitfalls": [
+            "方法名是全小写的 `arraycopy`，不是 `ArrayCopy` 或 `arrayCopy`",
+            "参数顺序是源数组、源起点、目标数组、目标起点、复制长度",
+            "`length` 表示复制的元素个数，不是结束下标",
+            "目标数组空间不足或起点为负数会触发下标越界异常",
+        ],
+        "sources": [
+            {
+                "label": "Oracle Java System API",
+                "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/System.html",
+                "note": "官方文档定义了 `arraycopy(Object src, int srcPos, Object dest, int destPos, int length)`，用于从源数组指定位置复制指定数量的元素到目标数组指定位置。",
+            }
+        ],
+        "patterns": [r"\bSystem\s*\.\s*arraycopy\s*\("],
+    },
+    {
         "id": "string-char-array-constructor",
         "functionName": "new String(char[])",
         "commonFunction": "字符串String的常用函数",
@@ -134,6 +163,19 @@ def detect_function_usages(solution_java: str, *, problem_title: str = "", probl
                 "indexStack.push(i);"
             )
             usage["summary"] = "使用 Java `Stack` 保存还没有找到更高温度的日期下标，当前温度更高时连续弹出并填写等待天数。"
+        elif usage.get("id") == "stack-basic-methods" and "largestRectangleArea" in solution_java:
+            usage["exampleTitle"] = "柱状图最大矩形中保存未确定右边界的柱子下标"
+            usage["exampleCode"] = (
+                "Stack<Integer> stack = new Stack<>();\n"
+                "stack.push(0);\n\n"
+                "while (barChart[stack.peek()] > barChart[i]) {\n"
+                "    int height = barChart[stack.pop()];\n"
+                "    int width = i - stack.peek() - 1;\n"
+                "    ans = Math.max(ans, height * width);\n"
+                "}\n"
+                "stack.push(i);"
+            )
+            usage["summary"] = "使用 Java `Stack` 保存还没有找到右侧更矮柱子的柱子下标，当前柱子更矮时连续弹出并结算矩形面积。"
         usage["problemTitle"] = problem_title
         usage["problemNotePath"] = problem_note_path
         usages.append(usage)
