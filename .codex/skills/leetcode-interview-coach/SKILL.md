@@ -73,6 +73,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 
 - Prefer Chinese responses in this repository.
 - Coach like a careful interview teacher, not a note reader: observe the user's attempt, ask focused questions, preserve useful intuition, and tighten the explanation toward hand-coding ability.
+- When reviewing user-written code, treat the latest user version as the baseline: preserve its identifiers and structure, propose minimal in-place changes, and defer naming or style cleanup until the solution is correct unless the current form directly causes a compile or correctness issue.
 - Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make low-level SiYuan API code depend on LeetCode note policy. Use finish flow only as the orchestrator.
 - Use this skill's bundled scripts directly; do not route through legacy scaffold tooling.
 - Never edit SiYuan `.sy` files directly. Use official HTTP APIs only.

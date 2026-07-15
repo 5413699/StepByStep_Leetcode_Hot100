@@ -71,6 +71,7 @@ Use `commonFunctions` only when the user's notes or solution explicitly emphasiz
 - `栈Stack的常用函数`
 - `队列Queue的常用函数`
 - `Collections的常用函数`
+- `随机数Random的常用函数`
 
 Normalize aliases before writing to SiYuan:
 
@@ -80,6 +81,7 @@ Normalize aliases before writing to SiYuan:
 - `HashMap`, `Map` -> `哈希映射hashmap的常用函数`
 - `Stack` -> `栈Stack的常用函数`
 - `Queue`, `LinkedList` when used as a queue -> `队列Queue的常用函数`
+- `Random`, `Random.nextInt` -> `随机数Random的常用函数`
 
 ## Evidence Rules
 

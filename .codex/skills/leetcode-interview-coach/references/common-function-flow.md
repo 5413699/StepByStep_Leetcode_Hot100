@@ -19,6 +19,7 @@ Detect concrete API usage from the final Java solution and the conversation dige
 - `System.arraycopy(...)` -> `数组Array的常用函数`
 - `new String(char[])` / `new String(board[i])` -> `字符串String的常用函数`
 - `Stack<...>` / `new Stack<>()` -> `栈Stack的常用函数`
+- `Random.nextInt(...)` -> `随机数Random的常用函数`
 
 When adding a new detection, include:
 
@@ -42,6 +43,7 @@ src/notes/03.常用函数/
   04.哈希Map/
   05.队列Queue/
   06.栈Stack/
+  07.随机数Random/
 ```
 
 Each function note should contain:
