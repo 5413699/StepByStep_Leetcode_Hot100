@@ -34,6 +34,7 @@ Before a confirmed tag can create a new SiYuan concept page, it must have concre
 - array/list statement or `int[]`: `数组`
 - string sliding window: `字符串`
 - map/set counting or lookup: `哈希映射`
+- top-k selection or `PriorityQueue`: `堆`
 - stack monotonic or parentheses: `栈`
 - queue level-order or BFS: `队列`
 - graph nodes/edges or connected components: `图论`
@@ -72,6 +73,8 @@ Use `commonFunctions` only when the user's notes or solution explicitly emphasiz
 - `队列Queue的常用函数`
 - `Collections的常用函数`
 - `随机数Random的常用函数`
+- `堆PriorityQueue的常用函数`
+- `Stream流的常用函数`
 
 Normalize aliases before writing to SiYuan:
 
@@ -82,6 +85,8 @@ Normalize aliases before writing to SiYuan:
 - `Stack` -> `栈Stack的常用函数`
 - `Queue`, `LinkedList` when used as a queue -> `队列Queue的常用函数`
 - `Random`, `Random.nextInt` -> `随机数Random的常用函数`
+- `PriorityQueue`, `offer`, `poll`, `peek` -> `堆PriorityQueue的常用函数`
+- `Stream`, `mapToInt`, `toArray` -> `Stream流的常用函数`
 
 ## Evidence Rules
 

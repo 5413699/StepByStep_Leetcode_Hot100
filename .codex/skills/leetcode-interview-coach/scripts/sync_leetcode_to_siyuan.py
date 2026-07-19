@@ -96,6 +96,8 @@ TAG_ALIASES = {
         "Stack": "栈Stack的常用函数",
         "Queue": "队列Queue的常用函数",
         "LinkedList": "队列Queue的常用函数",
+        "PriorityQueue": "堆PriorityQueue的常用函数",
+        "Stream": "Stream流的常用函数",
     }
 }
 
@@ -184,6 +186,12 @@ CONCEPT_INTROS = {
         "signals": ["需要 O(1) 查询是否出现过", "需要记录出现次数或下标", "暴力查找中存在重复扫描"],
         "pitfalls": ["默认值语义错误", "key 类型没有防溢出", "回溯场景离开节点没有撤销计数"],
         "template": ["Map<Key, Integer> map = new HashMap<>();", "map.put(key, map.getOrDefault(key, 0) + 1);", "int count = map.getOrDefault(key, 0);"],
+    },
+    "堆": {
+        "intro": "堆是一种能快速取得当前最小值或最大值的完全二叉树结构，Java 中通常用 PriorityQueue 实现，适合持续选出最优候选或维护前 k 个元素。",
+        "signals": ["需要反复取得当前最小值或最大值", "只关心前 k 大或前 k 小而不需要完整排序", "新候选到来时需要快速淘汰当前最弱候选"],
+        "pitfalls": ["最大堆和最小堆方向选反", "误以为遍历堆能得到完整有序序列", "比较器比较了元素值而不是题目真正关心的优先级"],
+        "template": ["PriorityQueue<Integer> minHeap = new PriorityQueue<>();", "minHeap.offer(value);", "if (minHeap.size() > k) minHeap.poll();", "int boundary = minHeap.peek();"],
     },
     "队列": {
         "intro": "队列先进先出，常用于 BFS、层序遍历和按到达顺序处理状态。",
@@ -310,6 +318,18 @@ CONCEPT_INTROS = {
         "signals": ["代码中使用 Stack", "需要访问最近加入的元素", "需要用辅助栈保存额外状态"],
         "pitfalls": ["空栈时调用 peek 或 pop 会抛异常", "peek 不删除元素而 pop 会删除元素", "辅助栈和主栈 push/pop 不同步会导致状态错位"],
         "template": ["Stack<Integer> stack = new Stack<>();", "stack.push(x);", "int top = stack.peek();", "stack.pop();"],
+    },
+    "堆PriorityQueue的常用函数": {
+        "intro": "PriorityQueue 按比较器维护优先级，默认是最小堆；常用 offer 入堆、poll 删除堆顶、peek 查看堆顶，并用 size 控制候选数量。",
+        "signals": ["需要维护前 k 个候选", "需要频繁取得并淘汰当前最小或最大元素", "元素的优先级需要通过自定义比较器计算"],
+        "pitfalls": ["未传比较器时默认按元素自然顺序建立最小堆", "poll 和 peek 在空堆上会返回 null", "堆只保证堆顶优先级最高，不保证迭代顺序整体有序"],
+        "template": ["PriorityQueue<Integer> minHeap = new PriorityQueue<>((a, b) -> priority(a) - priority(b));", "minHeap.offer(value);", "if (minHeap.size() > k) minHeap.poll();"],
+    },
+    "Stream流的常用函数": {
+        "intro": "Java Stream 可以把集合元素映射、过滤并收集为目标结果；mapToInt 用于把 Integer 流拆箱为 IntStream，随后 toArray 返回 int[]。",
+        "signals": ["需要把 Collection<Integer> 转成 int[]", "需要在收集结果前进行映射或过滤", "希望用链式操作表达无状态的数据转换"],
+        "pitfalls": ["Collection.toArray() 返回 Object[] 而不是 int[]", "stream 的迭代顺序取决于源集合，PriorityQueue 的流不代表完整排序", "链式操作没有终止操作时不会真正执行"],
+        "template": ["int[] result = values.stream()", "        .mapToInt(Integer::intValue)", "        .toArray();"],
     },
     "Collections的常用函数": {
         "intro": "Collections 提供对 List 等集合的排序、反转、最大最小值和二分查找，适合处理对象集合而不是基本类型数组。",

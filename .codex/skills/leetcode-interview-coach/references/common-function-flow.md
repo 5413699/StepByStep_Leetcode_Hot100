@@ -20,6 +20,9 @@ Detect concrete API usage from the final Java solution and the conversation dige
 - `new String(char[])` / `new String(board[i])` -> `字符串String的常用函数`
 - `Stack<...>` / `new Stack<>()` -> `栈Stack的常用函数`
 - `Random.nextInt(...)` -> `随机数Random的常用函数`
+- `Map.getOrDefault(...)` -> `哈希映射hashmap的常用函数`
+- `PriorityQueue<...>` / `offer(...)` / `poll()` -> `堆PriorityQueue的常用函数`
+- `stream().mapToInt(...).toArray()` -> `Stream流的常用函数`
 
 When adding a new detection, include:
 
@@ -44,6 +47,8 @@ src/notes/03.常用函数/
   05.队列Queue/
   06.栈Stack/
   07.随机数Random/
+  08.堆PriorityQueue/
+  09.流Stream/
 ```
 
 Each function note should contain:

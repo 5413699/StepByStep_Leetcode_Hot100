@@ -95,6 +95,97 @@ FUNCTION_DEFINITIONS: list[dict[str, Any]] = [
         "patterns": [r"\bnew\s+String\s*\(\s*[^)]*\[\s*[^)]*\]\s*\)", r"\bnew\s+String\s*\(\s*[A-Za-z_][A-Za-z0-9_]*\s*\)"],
     },
     {
+        "id": "hash-map-get-or-default",
+        "functionName": "HashMap.getOrDefault",
+        "commonFunction": "哈希映射hashmap的常用函数",
+        "notePath": "src/notes/03.常用函数/04.哈希Map/HashMap.getOrDefault.md",
+        "signature": "Map<K, V>.getOrDefault(Object key, V defaultValue)",
+        "summary": "读取 key 对应的 value；当 key 不存在时返回指定默认值，常用于频率统计和状态计数。",
+        "whenToUse": [
+            "需要统计元素出现次数，并让第一次出现从 0 开始累加",
+            "读取映射值时希望显式提供缺省值",
+            "希望避免先写 containsKey 再分支处理",
+        ],
+        "exampleTitle": "统计数组中每个元素的出现频率",
+        "exampleCode": "Map<Integer, Integer> frequencyMap = new HashMap<>();\nfor (int num : nums) {\n    frequencyMap.put(num, frequencyMap.getOrDefault(num, 0) + 1);\n}",
+        "pitfalls": [
+            "方法名是 `getOrDefault`，不要拼成 `getOrDfault`",
+            "该方法只返回默认值，不会自动把默认值写入 Map",
+            "如果 key 明确映射到 null，返回结果仍可能是 null，使用包装类型拆箱时要注意",
+        ],
+        "sources": [
+            {
+                "label": "Oracle Java Map API",
+                "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html",
+                "note": "官方文档定义了 `getOrDefault(Object key, V defaultValue)` 的返回语义。",
+            }
+        ],
+        "patterns": [r"\b[A-Za-z_][A-Za-z0-9_]*\s*\.\s*getOrDefault\s*\("],
+    },
+    {
+        "id": "priority-queue-basic-methods",
+        "functionName": "PriorityQueue.offer/poll/size",
+        "commonFunction": "堆PriorityQueue的常用函数",
+        "notePath": "src/notes/03.常用函数/08.堆PriorityQueue/PriorityQueue常用方法.md",
+        "signature": "PriorityQueue<E>.offer(E e) / poll() / size()",
+        "summary": "使用 PriorityQueue 按优先级维护堆顶，配合 offer、poll 和 size 动态保留最优候选。",
+        "whenToUse": [
+            "只需要前 k 大或前 k 小元素，不需要完整排序",
+            "每次加入候选后要快速淘汰当前最弱候选",
+            "需要通过比较器让对象按频率、距离或其他字段确定优先级",
+        ],
+        "exampleTitle": "按频率维护大小为 k 的最小堆",
+        "exampleCode": "PriorityQueue<Integer> minHeap = new PriorityQueue<>(\n        (a, b) -> frequencyMap.get(a) - frequencyMap.get(b)\n);\n\nfor (int num : frequencyMap.keySet()) {\n    minHeap.offer(num);\n    if (minHeap.size() > k) {\n        minHeap.poll();\n    }\n}",
+        "pitfalls": [
+            "默认 PriorityQueue 是最小堆；最大堆需要反向比较器",
+            "构造器里的 lambda 是 Comparator 比较规则，不能放在匿名类的大括号里",
+            "堆中保存的对象类型和比较依据可以不同，例如保存元素值但按频率比较",
+            "一般场景优先用 `Integer.compare(priorityA, priorityB)`，避免两个大整数直接相减溢出",
+            "PriorityQueue 只保证堆顶最优，遍历或 stream 的结果不保证整体有序",
+        ],
+        "sources": [
+            {
+                "label": "Oracle Java PriorityQueue API",
+                "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/PriorityQueue.html",
+                "note": "官方文档说明 PriorityQueue 按自然顺序或构造器提供的 Comparator 排序，并定义 offer、poll、peek 等操作。",
+            }
+        ],
+        "patterns": [r"\bPriorityQueue\s*<[^>]+>\s+[A-Za-z_][A-Za-z0-9_]*", r"\bnew\s+PriorityQueue\s*<"],
+    },
+    {
+        "id": "stream-map-to-int-array",
+        "functionName": "Stream.mapToInt/toArray",
+        "commonFunction": "Stream流的常用函数",
+        "notePath": "src/notes/03.常用函数/09.流Stream/Stream.mapToInt-toArray.md",
+        "signature": "Stream<T>.mapToInt(ToIntFunction<? super T> mapper).toArray()",
+        "summary": "把对象流映射为 IntStream，并收集成基本类型 `int[]`，常用于将 `Collection<Integer>` 转换为 LeetCode 要求的数组。",
+        "whenToUse": [
+            "已有 Collection<Integer>，返回值要求 int[]",
+            "需要在收集数组前把对象字段映射为 int",
+            "需要通过方法引用 `Integer::intValue` 完成拆箱",
+        ],
+        "exampleTitle": "把 PriorityQueue<Integer> 转成 int[]",
+        "exampleCode": "return minHeap.stream()\n        .mapToInt(Integer::intValue)\n        .toArray();",
+        "pitfalls": [
+            "集合自身的 `toArray()` 返回 Object[]，不能直接赋给 int[]",
+            "`mapToInt` 需要返回 int 的映射函数，`Integer::intValue` 用于拆箱",
+            "PriorityQueue 的 stream 不保证频率排序；只有题目允许任意顺序时才能直接返回",
+        ],
+        "sources": [
+            {
+                "label": "Oracle Java Stream API",
+                "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/stream/Stream.html",
+                "note": "官方文档定义了 mapToInt 将对象流转换为 IntStream。",
+            },
+            {
+                "label": "Oracle Java IntStream API",
+                "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/stream/IntStream.html",
+                "note": "官方文档定义了 IntStream.toArray 返回包含流元素的 int[]。",
+            },
+        ],
+        "patterns": [r"\.\s*stream\s*\(\s*\)[\s\S]*?\.\s*mapToInt\s*\([\s\S]*?\.\s*toArray\s*\(\s*\)"],
+    },
+    {
         "id": "stack-basic-methods",
         "functionName": "Stack.push/pop/peek/isEmpty",
         "commonFunction": "栈Stack的常用函数",
