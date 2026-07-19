@@ -819,10 +819,6 @@ def coach_memory_notes(payload: dict[str, Any], tag_data: dict[str, list[str]] |
         note = as_text(item.get("note"))
         if note:
             result.setdefault(concept, []).append(note)
-    for concept in allowed:
-        for item in as_list(digest.get("reviewAdvice"))[:2]:
-            if concept in item:
-                result.setdefault(concept, []).append(item)
     return {key: unique(value)[:3] for key, value in result.items()}
 
 
