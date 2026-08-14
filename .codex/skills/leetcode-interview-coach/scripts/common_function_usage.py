@@ -124,15 +124,15 @@ FUNCTION_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "id": "priority-queue-basic-methods",
-        "functionName": "PriorityQueue.offer/poll/size",
+        "functionName": "PriorityQueue.offer/poll/peek/size",
         "commonFunction": "堆PriorityQueue的常用函数",
         "notePath": "src/notes/03.常用函数/08.堆PriorityQueue/PriorityQueue常用方法.md",
-        "signature": "PriorityQueue<E>.offer(E e) / poll() / size()",
-        "summary": "使用 PriorityQueue 按优先级维护堆顶，配合 offer、poll 和 size 动态保留最优候选。",
+        "signature": "PriorityQueue<E>.offer(E e) / poll() / peek() / size()",
+        "summary": "使用 PriorityQueue 按优先级维护堆顶，配合 offer、poll、peek 和 size 动态保留最优候选。",
         "whenToUse": [
+            "需要持续快速取得当前最小值或最大值",
             "只需要前 k 大或前 k 小元素，不需要完整排序",
-            "每次加入候选后要快速淘汰当前最弱候选",
-            "需要通过比较器让对象按频率、距离或其他字段确定优先级",
+            "需要用两个堆分别维护较小一半和较大一半的边界",
         ],
         "exampleTitle": "按频率维护大小为 k 的最小堆",
         "exampleCode": "PriorityQueue<Integer> minHeap = new PriorityQueue<>(\n        (a, b) -> frequencyMap.get(a) - frequencyMap.get(b)\n);\n\nfor (int num : frequencyMap.keySet()) {\n    minHeap.offer(num);\n    if (minHeap.size() > k) {\n        minHeap.poll();\n    }\n}",
@@ -141,6 +141,7 @@ FUNCTION_DEFINITIONS: list[dict[str, Any]] = [
             "构造器里的 lambda 是 Comparator 比较规则，不能放在匿名类的大括号里",
             "堆中保存的对象类型和比较依据可以不同，例如保存元素值但按频率比较",
             "一般场景优先用 `Integer.compare(priorityA, priorityB)`，避免两个大整数直接相减溢出",
+            "空堆调用 `peek()` 或 `poll()` 会返回 null，自动拆箱时可能触发空指针异常",
             "PriorityQueue 只保证堆顶最优，遍历或 stream 的结果不保证整体有序",
         ],
         "sources": [
@@ -263,7 +264,27 @@ def detect_function_usages(solution_java: str, *, problem_title: str = "", probl
         if not any(re.search(pattern, solution_java) for pattern in definition["patterns"]):
             continue
         usage = {key: value for key, value in definition.items() if key != "patterns"}
-        if usage.get("id") == "stack-basic-methods" and "decodeString" in solution_java:
+        if usage.get("id") == "priority-queue-basic-methods" and "findMedian" in solution_java:
+            usage["exampleTitle"] = "数据流中用最大堆和最小堆维护中位数"
+            usage["exampleCode"] = (
+                "PriorityQueue<Integer> small = new PriorityQueue<>(\n"
+                "        (a, b) -> Integer.compare(b, a)\n"
+                ");\n"
+                "PriorityQueue<Integer> large = new PriorityQueue<>();\n\n"
+                "if (small.isEmpty() || num <= small.peek()) {\n"
+                "    small.offer(num);\n"
+                "} else {\n"
+                "    large.offer(num);\n"
+                "}\n\n"
+                "if (small.size() > large.size() + 1) {\n"
+                "    large.offer(small.poll());\n"
+                "}\n"
+                "if (large.size() > small.size()) {\n"
+                "    small.offer(large.poll());\n"
+                "}"
+            )
+            usage["summary"] = "使用一个最大堆保存较小的一半、一个最小堆保存较大的一半，通过 offer、poll、peek 和 size 动态维护中位数。"
+        elif usage.get("id") == "stack-basic-methods" and "decodeString" in solution_java:
             usage["exampleTitle"] = "字符串解码中保存括号层状态"
             usage["exampleCode"] = (
                 "Stack<Integer> countStack = new Stack<>();\n"
