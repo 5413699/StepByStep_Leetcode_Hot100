@@ -58,6 +58,36 @@ class NoteRendererTests(unittest.TestCase):
         self.assertIn("> ```java\n> int[] dp = new int[n + 1];\n> ```", rendered)
         self.assertIn("**勘误／更新说明**\n\nn = 1 时长度为 2", rendered)
 
+    def test_code_card_names_are_metadata_not_history_rewrites(self):
+        payload = sample_payload()
+        original_turns = json.loads(json.dumps(payload["teachingTranscript"]))
+        payload["teachingTranscript"][0]["codeBlockNames"] = ["GPT：状态数组初始化"]
+        payload["teachingTranscript"][1]["codeBlockNames"] = ["我的滚动变量尝试"]
+        sections = build_sections(payload)
+        teaching = next(section for section in sections if section.get("title") == "GPT 教学流程")
+        self.assertEqual(teaching["codeBlockNames"], ["GPT：状态数组初始化", "我的滚动变量尝试"])
+        self.assertEqual([section["codeTitle"] for section in sections if "codeTitle" in section], ["数组 DP", "滚动变量（最终版本）"])
+        rendered = render_markdown(payload)
+        self.assertIn("> **代码：GPT：状态数组初始化**\n>\n> ```java", rendered)
+        self.assertIn("**代码：我的滚动变量尝试**\n\n```java", rendered)
+        for before, after in zip(original_turns, payload["teachingTranscript"]):
+            self.assertEqual(before["contentMarkdown"], after["contentMarkdown"])
+        self.assertIn("> int[] dp = new int[n + 1];\n> ```", rendered)
+
+    def test_code_card_names_keep_positions_when_other_turns_omit_names(self):
+        payload = sample_payload()
+        payload["teachingTranscript"][0]["correctionMarkdown"] = "```java\n// 补充说明\n```"
+        payload["teachingTranscript"][1]["codeBlockNames"] = ["我的实现"]
+        teaching = next(section for section in build_sections(payload) if section.get("title") == "GPT 教学流程")
+        self.assertEqual(teaching["codeBlockNames"], ["", "", "我的实现"])
+
+    def test_invalid_card_names_fail_before_rendering(self):
+        for names in ["一个名称", [""], [], ["第一个", "多余的"]]:
+            payload = sample_payload()
+            payload["teachingTranscript"][0]["codeBlockNames"] = names
+            with self.subTest(names=names), self.assertRaisesRegex(ValueError, "codeBlockNames"):
+                build_sections(payload)
+
     def test_natural_language_digest_and_review_deduplication(self):
         payload = sample_payload()
         payload["readiness"]["internal"] = {"hidden": "不要泄漏"}

@@ -24,7 +24,7 @@ Read `note-template.md` for presentation. These fields are optional for backward
     {"title": "数组 DP", "language": "java", "code": "可复制的有效代码，保留原注释与变量名", "timeComplexity": "O(n)", "spaceComplexity": "O(n)", "isFinal": false, "explanation": "需要查看各阶状态时适用。", "correctionMarkdown": "仅当存在必要修正或过时注释时说明。"},
     {"title": "滚动变量", "language": "java", "code": "最终有效代码", "timeComplexity": "O(n)", "spaceComplexity": "O(1)", "isFinal": true, "explanation": "只需要最终答案时适用。"}
   ],
-  "trainingMarkdown": "根据真实对话整理的简短训练记录；可省略并使用 digest。",
+  "trainingMarkdown": "根据真实对话整理的简短训练记录：以学习者第一人称“我”叙述，教练的行为明确写“教练”；可省略并使用 digest。",
   "complexityMarkdown": "复杂度与边界说明。",
   "reviewMarkdown": "面试表达、掌握状态与复习动作；可省略并使用 digest/readiness。",
   "conversationDigest": {}
@@ -33,7 +33,11 @@ Read `note-template.md` for presentation. These fields are optional for backward
 
 `teachingTranscript` 项目角色仅为 `assistant` / `user`；非对话的来源或缺失说明可明确写入相应 Markdown，不能冒称原话。`solutionVariants` 非空时必须有且只有一个 `isFinal: true`。只记录真实有效版本，不要求每题多版本。`solutionJava` 继续作为旧发布目标和 Java 集成的最终答案字段，与最终 Java variant 一致。
 
+每条教学记录可另提供 `codeBlockNames: ["状态转移方程", "初始状态"]`，按该条 `contentMarkdown` 内代码围栏的出现顺序一一命名，数量应匹配。名称按片段实际用途编写，不改动历史正文或注释。未提供时渲染器使用已有上下文生成简短名称；有效答案直接使用版本 `title`，最终版本附最终标识。语雀写入代码卡片名称，仓库在代码块附近显示对应名称。
+
 保留用户原注释与变量名；仅规范缩进、空白、代码语言。历史错误代码保留在教学记录并加旁注；单列答案有必要修正时必须可编译且明确说明。主代理校核，不由渲染器修复或编造。
+
+新收尾应明确提供 `trainingMarkdown`，统一学习者视角；教练评估须明确标识。历史问答中的“我／你”保持原话，不做全局代词替换。`conversationDigest` 仍可用简短、客观的教练摘要服务索引，不直接冒充学习者原话。
 
 旧 payload 没有新增字段时继续支持 `noteContent` 或已有 `processMarkdown`；没有原文时展示「完整教学记录未提供」，摘要不得伪装成逐轮对话。
 

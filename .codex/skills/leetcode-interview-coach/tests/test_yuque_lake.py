@@ -1,9 +1,11 @@
 """Read-only native Lake rendering and preservation regressions."""
 
 from pathlib import Path
+import json
 import re
 import sys
 import unittest
+from urllib.parse import unquote
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from render_yuque_lake import LakeRenderer, inspect_lake, render_lake, verify_lake
@@ -55,6 +57,33 @@ class LakeTests(unittest.TestCase):
         self.assertEqual(parsed["codes"][1], ("java", CODE))
         self.assertEqual(parsed["codes"][-1], ("java", CODE))
         self.assertNotIn(CODE, render_lake(record()))  # Code lives inside URI-encoded JSON.
+
+    def test_solution_cards_use_version_names_and_reference_name_schema(self):
+        body = render_lake(record())
+        cards = [json.loads(unquote(encoded)) for encoded in re.findall(r'name="codeblock" value="data:([^"]+)"', body)]
+        self.assertEqual([card["name"] for card in cards][-2:], ["数组 DP", "滚动变量（最终版本）"])
+        self.assertTrue(all(card["name"] and card["search"] == card["name"] for card in cards))
+        self.assertEqual(cards[-1]["code"], CODE)
+
+    def test_explicit_teaching_names_survive_quotes_and_do_not_change_code(self):
+        payload = record()
+        before = inspect_lake(render_lake(payload))
+        payload["teachingTranscript"][0]["codeBlockNames"] = ["GPT：先计算当前状态"]
+        payload["teachingTranscript"][1]["codeBlockNames"] = ["我的滚动变量版本"]
+        after = inspect_lake(render_lake(payload))
+        self.assertEqual(after["codeNames"][:2], ["GPT：先计算当前状态", "我的滚动变量版本"])
+        self.assertEqual(after["codes"], before["codes"])
+        self.assertEqual(after["text"], before["text"])
+
+    def test_teaching_fallback_uses_speaker_heading_and_context(self):
+        body = LakeRenderer().markdown("**GPT · 第 1 条**\n\n> ### 状态更新\n>\n> ```java\n> answer = a + b;\n> ```\n\n**我 · 第 2 条**\n\n我的实现：\n\n```java\nreturn answer;\n```")
+        names = inspect_lake(body)["codeNames"]
+        self.assertEqual(names, ["GPT · 第 1 条 · 状态更新", "我 · 第 2 条 · 我的实现"])
+
+    def test_old_payload_and_unlabelled_code_receive_nonempty_names(self):
+        self.assertEqual(inspect_lake(render_lake({"solutionJava": CODE}))["codeNames"], ["最终题解"])
+        body = LakeRenderer().markdown("```java\nreturn 1;\n```\n\n```java\nreturn 2;\n```")
+        self.assertEqual(inspect_lake(body)["codeNames"], ["Java 示例代码", "Java 示例代码（代码 2）"])
 
     def test_code_characters_are_never_markdown_interpreted(self):
         code = '\t// **保留** <xml> & "引号" \\\nString x = "```";  \nint[] a = {1, 2};'
@@ -117,6 +146,8 @@ class LakeTests(unittest.TestCase):
         self.assertTrue(any("折叠" in error for error in verify_lake(expected, {"body_lake": plain_fold})))
         wrong_language = expected.replace('%22mode%22%3A%22java%22', '%22mode%22%3A%22text%22', 1)
         self.assertTrue(any("代码" in error for error in verify_lake(expected, {"body_lake": wrong_language})))
+        missing_name = re.sub(r"%22name%22%3A%22.*?%22%2C%22search%22", "%22name%22%3A%22%22%2C%22search%22", expected, count=1)
+        self.assertTrue(any("名称" in error for error in verify_lake(expected, {"body_lake": missing_name})))
 
     def test_verification_checks_visual_features(self):
         expected = render_lake(record())

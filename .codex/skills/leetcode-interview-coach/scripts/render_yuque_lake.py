@@ -21,7 +21,7 @@ from html.parser import HTMLParser
 import json
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Iterator
 from urllib.parse import quote, unquote, urlsplit
 
 from render_learning_note import build_sections
@@ -34,11 +34,13 @@ LAKE_HEADER = ('<!doctype lake><meta name="doc-version" content="1" />'
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})([^\r\n]*)$")
 _HEADING = re.compile(r"^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$")
 _LIST = re.compile(r"^( *)([-+*]|\d+[.)])\s+(.*)$")
+_SPEAKER = re.compile(r"^\*\*((?:GPT|我)\s*·\s*第\s*\d+\s*条)\*\*$")
 
 
 class LakeRenderer:
     def __init__(self) -> None:
         self.sequence = 0
+        self.code_names: dict[str, int] = {}
 
     def identifier(self) -> str:
         self.sequence += 1
@@ -131,11 +133,27 @@ class LakeRenderer:
         flush()
         return "".join(result)
 
-    def code(self, code: str, language: str) -> str:
+    @staticmethod
+    def _label(value: str) -> str:
+        """Short display metadata derived from prose; never touch source code."""
+        value = re.sub(r"\[([^]]+)\]\([^)]*\)", r"\1", value)
+        value = re.sub(r"[`*_~]", "", value)
+        value = re.sub(r"\s+", " ", value).strip().rstrip("：:。")
+        return value if len(value) <= 56 else value[:55] + "…"
+
+    def code(self, code: str, language: str, name: str = "") -> str:
+        language_label = {"java": "Java", "text": "文本"}.get(language, language or "文本")
+        title = name.strip() or f"{language_label} 示例代码"
+        self.code_names[title] = self.code_names.get(title, 0) + 1
+        if self.code_names[title] > 1:
+            title += f"（代码 {self.code_names[title]}）"
         card = {
             "mode": language or "text", "code": code, "autoWrap": False,
             "lineNumbers": True, "heightLimit": False, "collapsed": False,
-            "hideToolbar": False, "name": "", "tabSize": 4,
+            # The reference Lake codeblock stores its visible toolbar title in
+            # name, with the same value in search. A heading outside the card
+            # does not populate the editor's code-title field.
+            "hideToolbar": False, "name": title, "search": title, "tabSize": 4,
             "indentWithTab": False, "lightLines": [], "foldLines": [],
             "theme": "Github Light", "fontSize": 14, "customStyle": [],
             "__spacing": "both", "id": self.identifier(),
@@ -158,10 +176,12 @@ class LakeRenderer:
         return bool(_FENCE.match(line) or _HEADING.match(line) or _LIST.match(line)
                     or re.match(r"^ {0,3}>", line) or re.fullmatch(r"\s*(?:---+|\*\*\*+|___+)\s*", line))
 
-    def markdown(self, source: str) -> str:
+    def markdown(self, source: str, *, code_title: str = "", context: str = "", speaker: str = "", code_names: Iterator[str] | None = None) -> str:
         lines = source.replace("\r\n", "\n").replace("\r", "\n").split("\n")
         parts: list[str] = []
         index = 0
+        heading_context = context
+        nearby_context = ""
         while index < len(lines):
             line = lines[index]
             if not line.strip():
@@ -180,10 +200,19 @@ class LakeRenderer:
                         break
                     code_lines.append(lines[index])
                     index += 1
-                parts.append(self.code("\n".join(code_lines), language))
+                detail = self._label(nearby_context or heading_context)
+                if speaker and detail:
+                    detail = f"{speaker} · {detail}"
+                elif speaker:
+                    detail = f"{speaker} · 示例代码"
+                authored_name = next(code_names, "") if code_names is not None else ""
+                parts.append(self.code("\n".join(code_lines), language, authored_name or code_title or detail))
+                nearby_context = ""
                 continue
             heading = _HEADING.match(line)
             if heading:
+                heading_context = self._label(heading.group(2))
+                nearby_context = ""
                 parts.append(self.element(f"h{len(heading.group(1))}", self.inline(heading.group(2))))
                 index += 1
                 continue
@@ -192,7 +221,7 @@ class LakeRenderer:
                 while index < len(lines) and re.match(r"^ {0,3}>", lines[index]):
                     quoted.append(re.sub(r"^ {0,3}> ?", "", lines[index], count=1))
                     index += 1
-                parts.append(self.element("blockquote", self.markdown("\n".join(quoted))))
+                parts.append(self.element("blockquote", self.markdown("\n".join(quoted), code_title=code_title, context=nearby_context or heading_context, speaker=speaker, code_names=code_names)))
                 continue
             item = _LIST.match(line)
             if item:
@@ -216,7 +245,7 @@ class LakeRenderer:
                             index += 1
                         else:
                             break
-                    items.append(self.element("li", self.markdown("\n".join(content))))
+                    items.append(self.element("li", self.markdown("\n".join(content), code_title=code_title, context=nearby_context or heading_context, speaker=speaker, code_names=code_names)))
                 parts.append(self.element("ol" if ordered else "ul", "".join(items)))
                 continue
             if index + 1 < len(lines) and "|" in line and self._table_separator(lines[index + 1]):
@@ -239,6 +268,15 @@ class LakeRenderer:
                     break
                 paragraph.append(lines[index])
                 index += 1
+            prose = "\n".join(paragraph)
+            role = _SPEAKER.fullmatch(prose.strip())
+            if role:
+                speaker = role.group(1)
+                # New turns must not inherit the previous speaker's caption.
+                heading_context = ""
+                nearby_context = ""
+            else:
+                nearby_context = self._label(paragraph[-1])
             parts.append(self.element("p", self.inline("\n".join(paragraph))))
         return "".join(parts)
 
@@ -249,7 +287,7 @@ def render_lake(payload: dict[str, Any]) -> str:
     for section in build_sections(payload):
         if section.get("heading"):
             parts.append(renderer.element("h2", renderer.inline(section["heading"])))
-        content = renderer.markdown(section["markdown"])
+        content = renderer.markdown(section["markdown"], code_title=section.get("codeTitle", ""), context=section.get("title") or section.get("heading", ""), code_names=iter(section.get("codeBlockNames", [])))
         if section["kind"] == "collapse":
             summary = renderer.element("summary", renderer.inline(section["title"]), **{"class": "lake-summary"})
             content = renderer.element("details", summary + content, **{
@@ -316,7 +354,7 @@ def inspect_lake(source: str) -> dict[str, Any]:
     """Semantic fingerprint; IDs/style rewrites do not invalidate read-back."""
     parsed = _LakeParser(source)
     nodes = list(_walk(parsed.root))
-    result: dict[str, Any] = {"text": _canonical(_node_text(parsed.root)), "codes": [], "collapses": [], "headings": [], "links": [], "quotes": 0, "bold": []}
+    result: dict[str, Any] = {"text": _canonical(_node_text(parsed.root)), "codes": [], "codeNames": [], "collapses": [], "headings": [], "links": [], "quotes": 0, "bold": []}
     for node in nodes:
         if node.tag == "card":
             try:
@@ -326,6 +364,7 @@ def inspect_lake(source: str) -> dict[str, Any]:
                 continue
             if node.attrs.get("name") == "codeblock":
                 result["codes"].append((data.get("mode", "text"), data.get("code", "")))
+                result["codeNames"].append(data.get("name", ""))
             elif node.attrs.get("name") == "bookmarkInline":
                 result["links"].append((data.get("src", ""), _canonical(data.get("text", ""))))
         elif node.tag == "details":
@@ -354,6 +393,7 @@ def verify_lake(expected_body: str, actual_doc: dict[str, Any]) -> list[str]:
     checks = [
         (expected["text"] == actual["text"], "回读正文与预览的文字或顺序不一致。"),
         (expected["codes"] == actual["codes"], "回读代码块的语言、字符、注释或顺序不一致。"),
+        (expected["codeNames"] == actual["codeNames"], "回读代码块名称缺失或不一致。"),
         (expected["collapses"] == actual["collapses"], "回读原生折叠的标题、数量或默认收起状态不一致。"),
         (expected["headings"] == actual["headings"], "回读标题层级或顺序不一致。"),
         (expected["links"] == actual["links"], "回读链接地址或文字不一致。"),

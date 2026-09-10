@@ -22,6 +22,8 @@ class NoteSection(TypedDict, total=False):
     heading: str
     title: str
     collapsed: bool
+    codeTitle: str
+    codeBlockNames: list[str]
 
 
 def _text(value: Any) -> str:
@@ -116,6 +118,70 @@ def _transcript_markdown(transcript: Any, process: Any) -> str:
     return "\n\n".join(rendered)
 
 
+def _fenced_code_count(markdown: str) -> int:
+    """Count blocks without altering their contents, including quoted fences."""
+    opening = ""
+    count = 0
+    for line in markdown.splitlines():
+        candidate = re.sub(r"^\s*(?:>\s*)*", "", line)
+        fence = re.match(r"(`{3,}|~{3,})(.*)$", candidate)
+        if not fence:
+            continue
+        token, info = fence.groups()
+        if not opening:
+            opening = token
+            count += 1
+        elif token[0] == opening[0] and len(token) >= len(opening) and not info.strip():
+            opening = ""
+    return count
+
+
+def _transcript_code_names(transcript: Any) -> list[str]:
+    """Keep optional authored card titles aligned across quoted/user turns."""
+    if not isinstance(transcript, list):
+        return []
+    result: list[str] = []
+    for index, entry in enumerate(transcript, start=1):
+        count = _fenced_code_count(_clean_markdown(entry.get("contentMarkdown")))
+        names = entry.get("codeBlockNames")
+        if names is not None:
+            if not isinstance(names, list) or any(not isinstance(name, str) or not name.strip() for name in names):
+                raise ValueError(f"第 {index} 条教学记录的 codeBlockNames 必须是非空名称的数组。")
+            if len(names) != count:
+                raise ValueError(f"第 {index} 条教学记录有 {count} 个代码块，codeBlockNames 必须一一对应。")
+            result.extend(name.strip() for name in names)
+        else:
+            result.extend([""] * count)
+        # Corrections are appended after the recorded turn, and use descriptive
+        # fallback titles unless their content is separately authored as a turn.
+        result.extend([""] * _fenced_code_count(_clean_markdown(entry.get("correctionMarkdown"))))
+    return result
+
+
+def _with_code_names(markdown: str, names: list[str]) -> str:
+    """Repository-only captions sit outside fences; authored history is intact."""
+    if not names:
+        return markdown
+    result: list[str] = []
+    opening = ""
+    name_index = 0
+    for line in markdown.splitlines(keepends=True):
+        fence = re.match(r"^(\s*(?:>\s*)*)(`{3,}|~{3,})([^\r\n]*)", line)
+        if fence:
+            prefix, token, info = fence.groups()
+            if not opening:
+                opening = token
+                name = names[name_index] if name_index < len(names) else ""
+                name_index += 1
+                if name:
+                    display = html.escape(name).replace("*", r"\*").replace("_", r"\_")
+                    result.append(f"{prefix}**代码：{display}**\n{prefix.rstrip()}\n")
+            elif token[0] == opening[0] and len(token) >= len(opening) and not info.strip():
+                opening = ""
+        result.append(line)
+    return "".join(result)
+
+
 def _training_markdown(payload: dict[str, Any], digest: dict[str, Any]) -> str:
     supplied = _clean_markdown(payload.get("trainingMarkdown"))
     if supplied:
@@ -177,7 +243,9 @@ def _review_markdown(payload: dict[str, Any], digest: dict[str, Any]) -> str:
 def build_sections(payload: dict[str, Any]) -> list[NoteSection]:
     """Return ordered, provider-neutral Markdown/collapse sections.
 
-    ``heading`` is an optional external level-two heading. A collapse has a
+    ``heading`` is an optional external level-two heading. ``codeTitle`` names
+    a solution's native code card without changing repository fenced code.
+    A collapse has a
     separate ``title`` and ``collapsed=True``; its Markdown is the inner body.
     Legacy noteContent is already authored body text and must not receive a
     second generated digest. Structured transcript/variants take precedence.
@@ -198,7 +266,7 @@ def build_sections(payload: dict[str, Any]) -> list[NoteSection]:
     if statement or structured:
         sections.append({"kind": "collapse", "title": "题干、示例与限制", "collapsed": True, "markdown": statement or "题干未提供，请通过原题链接查看。"})
     if structured or _text(payload.get("processMarkdown")):
-        sections.append({"kind": "collapse", "title": "GPT 教学流程", "collapsed": True, "markdown": _transcript_markdown(payload.get("teachingTranscript"), payload.get("processMarkdown"))})
+        sections.append({"kind": "collapse", "title": "GPT 教学流程", "collapsed": True, "markdown": _transcript_markdown(payload.get("teachingTranscript"), payload.get("processMarkdown")), "codeBlockNames": _transcript_code_names(payload.get("teachingTranscript"))})
 
     variants = payload.get("solutionVariants")
     if variants is not None and not isinstance(variants, list):
@@ -232,9 +300,10 @@ def build_sections(payload: dict[str, Any]) -> list[NoteSection]:
                 section = {"kind": "collapse", "title": variant_title, "collapsed": True, "markdown": "\n\n".join(parts)}
             if index == 0:
                 section["heading"] = "答案版本" if len(variants) > 1 else "最终题解"
+            section["codeTitle"] = variant_title + ("（最终版本）" if variant.get("isFinal") is True else "")
             sections.append(section)
     elif _text(payload.get("solutionJava")):
-        sections.append({"kind": "markdown", "heading": "最终题解", "markdown": _fenced_code(payload["solutionJava"])})
+        sections.append({"kind": "markdown", "heading": "最终题解", "codeTitle": "最终题解", "markdown": _fenced_code(payload["solutionJava"])})
 
     digest = payload.get("conversationDigest")
     digest = digest if isinstance(digest, dict) else {}
@@ -260,13 +329,14 @@ def render_markdown(payload: dict[str, Any], include_title: bool = True) -> str:
     """Render repository Markdown; HTML details is not a YuQue wire format."""
     pieces = [f"# {normalize_title(payload)}"] if include_title else []
     for section in build_sections(payload):
+        markdown = _with_code_names(section["markdown"], section.get("codeBlockNames", []))
         if section.get("heading"):
             pieces.append(f"## {section['heading']}")
         if section["kind"] == "collapse":
             title = html.escape(section["title"], quote=True)
-            pieces.append(f"<details>\n<summary>{title}</summary>\n\n{section['markdown']}\n\n</details>")
+            pieces.append(f"<details>\n<summary>{title}</summary>\n\n{markdown}\n\n</details>")
         else:
-            pieces.append(section["markdown"])
+            pieces.append(markdown)
     return "\n\n".join(pieces).rstrip() + "\n"
 
 
