@@ -11,6 +11,7 @@ param(
 
     [string]$CommitMetadataJson,
 
+    [switch]$AllowUnrelatedChanges,
     [switch]$NoPush
 )
 
@@ -130,6 +131,7 @@ function Invoke-GitCommitWithUtf8Message {
     [System.IO.File]::WriteAllText($messagePath, $Message, $utf8NoBom)
     try {
         & git commit -F $messagePath
+        if ($LASTEXITCODE -ne 0) { throw "Git commit failed." }
     } finally {
         if (Test-Path -LiteralPath $messagePath) {
             Remove-Item -LiteralPath $messagePath -Force
@@ -173,6 +175,7 @@ foreach ($path in $Paths) {
 }
 
 & mvn -q -DskipTests compile
+if ($LASTEXITCODE -ne 0) { throw "Maven compile failed; no files staged or committed." }
 
 $statusLines = & git -c core.quotePath=false status --porcelain=v1 --untracked-files=all
 $trackedSet = New-Object System.Collections.Generic.HashSet[string]
@@ -192,12 +195,20 @@ foreach ($line in $statusLines) {
     }
 }
 
-if ($unrelated.Count -gt 0) {
+if ($unrelated.Count -gt 0 -and -not $AllowUnrelatedChanges) {
     throw "Unrelated worktree changes exist. Commit refused:`n$($unrelated -join "`n")"
+}
+
+# An unrelated staged edit would be included by git commit. Never unstage the
+# user's work automatically; reject it even when unrelated unstaged edits are OK.
+$previouslyStaged = & git -c core.quotePath=false diff --cached --name-only
+foreach ($path in $previouslyStaged) {
+    if (-not $trackedSet.Contains($path)) { throw "Unrelated staged file exists: $path" }
 }
 
 foreach ($path in $Paths) {
     & git add -- $path
+    if ($LASTEXITCODE -ne 0) { throw "Git staging failed: $path" }
 }
 
 $staged = & git diff --cached --name-only
@@ -236,3 +247,4 @@ if ($upstreamExitCode -eq 0 -and $upstream) {
     }
     & git push -u $remote HEAD
 }
+if ($LASTEXITCODE -ne 0) { throw "Git push failed; local commit is retained." }

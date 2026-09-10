@@ -21,7 +21,10 @@ param(
     [string]$SyncInputJson,
     [string]$WorkflowMetadataJson,
     [string]$WorkflowConfigPath,
+    [switch]$ReplaceWholeNote,
+    [switch]$AllowUnrelatedChanges,
     [switch]$SkipSiyuan,
+    [switch]$SkipYuque,
     [switch]$NoPush
 )
 
@@ -65,7 +68,7 @@ function Update-MarkedMarkdownRegion {
         $updated = $region + "`n"
     }
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-    $fullPath = (Resolve-Path -LiteralPath $Path).Path
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
     [System.IO.File]::WriteAllText($fullPath, $updated, $utf8NoBom)
 }
 
@@ -124,10 +127,6 @@ if ($SolutionContent) {
         -SolutionContent $SolutionContent
 }
 
-if ($NoteContent) {
-    Update-MarkedMarkdownRegion -Path $NotePath -Content $NoteContent
-}
-
 $finishScript = Join-Path $scriptDir "finish_problem.ps1"
 $functionUsagePath = Join-Path $env:TEMP ("leetcode-function-usage-{0}.json" -f ([guid]::NewGuid().ToString("N")))
 $functionNotePaths = @()
@@ -159,6 +158,54 @@ try {
     throw
 }
 
+# Build the authored learning record once, before rendering or committing.
+# Preserve optional nested teaching fields from the UTF-8 metadata verbatim.
+$inputPath = Join-Path $env:TEMP ("leetcode-learning-record-{0}.json" -f ([guid]::NewGuid().ToString("N")))
+if ($SyncInputJson) {
+    # The user's source record is immutable; generated Git metadata belongs to
+    # the run's copy, so it cannot dirty a committed fixture after the commit.
+    Copy-Item -LiteralPath $SyncInputJson -Destination $inputPath
+} else {
+    $payloadMetadataPath = Join-Path $env:TEMP ("leetcode-learning-record-metadata-{0}.json" -f ([guid]::NewGuid().ToString("N")))
+    $recordMetadata = @{}
+    if ($workflowMetadata) {
+        foreach ($property in $workflowMetadata.PSObject.Properties) {
+            $recordMetadata[$property.Name] = $property.Value
+        }
+    }
+    $recordMetadata.problemTitle = $ProblemTitle
+    $recordMetadata.thinking = $Thinking
+    $recordMetadata.noteContent = $NoteContent
+    $recordMetadata.statementMarkdown = $StatementMarkdown
+    $recordMetadata.processMarkdown = $ProcessMarkdown
+    $recordMetadata.solutionJava = $SolutionContent
+    $recordMetadata.complexityMarkdown = $ComplexityMarkdown
+    $recordMetadata.pitfalls = $Pitfalls
+    Write-Utf8Json -Path $payloadMetadataPath -Value $recordMetadata
+    $payloadArgs = @((Join-Path $scriptDir "build_siyuan_payload.py"), "--output", $inputPath, "--metadata-json", $payloadMetadataPath)
+    if ($TagPlanJson) { $payloadArgs += @("--tag-plan-json", $TagPlanJson) }
+    if ($ReadinessJson) { $payloadArgs += @("--readiness-json", $ReadinessJson) }
+    if ($ConversationDigestJson) { $payloadArgs += @("--conversation-digest-json", $ConversationDigestJson) }
+    if (Test-Path -LiteralPath $functionUsagePath) { $payloadArgs += @("--function-usage-json", $functionUsagePath) }
+    try {
+        & python @payloadArgs
+        if ($LASTEXITCODE -ne 0) { throw "Failed to build provider-neutral learning-record payload." }
+    } finally {
+        if (Test-Path -LiteralPath $payloadMetadataPath) { Remove-Item -LiteralPath $payloadMetadataPath -Force }
+    }
+}
+$renderedNotePath = Join-Path $env:TEMP ("leetcode-note-preview-{0}.md" -f ([guid]::NewGuid().ToString("N")))
+$renderArgs = @((Join-Path $scriptDir "render_learning_note.py"), "--input", $inputPath, "--output", $renderedNotePath)
+if (-not $ReplaceWholeNote) { $renderArgs += "--without-title" }
+& python @renderArgs
+if ($LASTEXITCODE -ne 0) { throw "Learning note rendering failed; retained payload: $inputPath" }
+$renderedNote = [System.IO.File]::ReadAllText($renderedNotePath, [System.Text.UTF8Encoding]::new($false, $true))
+if ($ReplaceWholeNote) {
+    [System.IO.File]::WriteAllText([System.IO.Path]::GetFullPath($NotePath), $renderedNote, [System.Text.UTF8Encoding]::new($false))
+} else {
+    Update-MarkedMarkdownRegion -Path $NotePath -Content $renderedNote
+}
+
 $commitMetadataPath = Join-Path $env:TEMP ("leetcode-commit-metadata-{0}.json" -f ([guid]::NewGuid().ToString("N")))
 Write-Utf8Json -Path $commitMetadataPath -Value ([pscustomobject]@{
     problemTitle = $ProblemTitle
@@ -173,6 +220,7 @@ $finishArgs = @{
 if ($NoPush) {
     $finishArgs.NoPush = $true
 }
+if ($AllowUnrelatedChanges) { $finishArgs.AllowUnrelatedChanges = $true }
 try {
     & $finishScript @finishArgs
 } finally {
@@ -183,65 +231,66 @@ try {
 
 $branch = (& git branch --show-current).Trim()
 $commit = (& git rev-parse --short HEAD).Trim()
+# Only generated Git metadata changes after commit; the authored body is reused.
+$learningRecord = Read-Utf8JsonObject -Path $inputPath
+$learningRecord | Add-Member -NotePropertyName git -NotePropertyValue ([pscustomobject]@{commit = $commit}) -Force
+Write-Utf8Json -Path $inputPath -Value $learningRecord
 $syncResult = "skipped"
+$yuqueResult = "skipped"
+$providerFailures = @()
 
-if (-not $SkipSiyuan) {
-    $inputPath = $SyncInputJson
-    if (-not $inputPath) {
-        $inputPath = Join-Path $env:TEMP ("leetcode-siyuan-sync-{0}.json" -f ([guid]::NewGuid().ToString("N")))
-        $payloadMetadataPath = Join-Path $env:TEMP ("leetcode-siyuan-metadata-{0}.json" -f ([guid]::NewGuid().ToString("N")))
-        Write-Utf8Json -Path $payloadMetadataPath -Value ([pscustomobject]@{
-            problemTitle = $ProblemTitle
-            thinking = $Thinking
-            commit = $commit
-            statementMarkdown = $StatementMarkdown
-            processMarkdown = $ProcessMarkdown
-            solutionJava = $SolutionContent
-            complexityMarkdown = $ComplexityMarkdown
-            pitfalls = $Pitfalls
-        })
-        $payloadArgs = @(
-            (Join-Path $scriptDir "build_siyuan_payload.py"),
-            "--output", $inputPath,
-            "--metadata-json", $payloadMetadataPath
-        )
-        if ($TagPlanJson) {
-            $payloadArgs += @("--tag-plan-json", $TagPlanJson)
-        }
-        if ($ReadinessJson) {
-            $payloadArgs += @("--readiness-json", $ReadinessJson)
-        }
-        if ($ConversationDigestJson) {
-            $payloadArgs += @("--conversation-digest-json", $ConversationDigestJson)
-        }
-        if (Test-Path -LiteralPath $functionUsagePath) {
-            $payloadArgs += @("--function-usage-json", $functionUsagePath)
-        }
-        try {
-            & python @payloadArgs
-        } finally {
-            if (Test-Path -LiteralPath $payloadMetadataPath) {
-                Remove-Item -LiteralPath $payloadMetadataPath -Force
-            }
-        }
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to build SiYuan sync payload with UTF-8 Python writer."
-        }
-    }
+$configPath = $WorkflowConfigPath
+if (-not $configPath) {
+    $configPath = Join-Path $env:USERPROFILE ".codex\leetcode-hot100-workflow.local.json"
+}
+$workflowConfig = $null
+if (Test-Path -LiteralPath $configPath) {
+    $workflowConfig = Read-Utf8JsonObject -Path $configPath
+}
+$siyuanEnabled = -not $SkipSiyuan
+$yuqueEnabled = (-not $SkipYuque) -and $workflowConfig -and $workflowConfig.yuque -and [bool]$workflowConfig.yuque.enabled
+if ($workflowConfig -and $workflowConfig.siyuan -and $null -ne $workflowConfig.siyuan.enabled) {
+    $siyuanEnabled = $siyuanEnabled -and [bool]$workflowConfig.siyuan.enabled
+}
+if ($workflowConfig -and $workflowConfig.yuque -and $null -ne $workflowConfig.yuque.enabled) {
+    $yuqueEnabled = $yuqueEnabled -and [bool]$workflowConfig.yuque.enabled
+}
+if ($workflowConfig -and $workflowConfig.yuque -and $null -ne $workflowConfig.yuque.autoPublish) {
+    $yuqueEnabled = $yuqueEnabled -and [bool]$workflowConfig.yuque.autoPublish
+}
 
+if ($siyuanEnabled) {
     $syncArgs = @((Join-Path $scriptDir "sync_leetcode_to_siyuan.py"), "--input", $inputPath)
-    if ($WorkflowConfigPath) {
-        $syncArgs += @("--config", $WorkflowConfigPath)
+    if ($configPath) {
+        $syncArgs += @("--config", $configPath)
     }
-    $dryRunOutput = & python @($syncArgs + "--dry-run") 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "SiYuan dry-run failed after Git completion:`n$($dryRunOutput -join "`n")"
+    try {
+        $dryRunOutput = & python @($syncArgs + "--dry-run") 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "SiYuan dry-run failed:`n$($dryRunOutput -join "`n")" }
+        $syncOutput = & python @syncArgs 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "SiYuan sync failed:`n$($syncOutput -join "`n")" }
+        $syncResult = $syncOutput -join "`n"
+    } catch {
+        $syncResult = "failed"
+        $providerFailures += "SiYuan: $($_.Exception.Message)"
     }
-    $syncOutput = & python @syncArgs 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "SiYuan sync failed after Git completion:`n$($syncOutput -join "`n")"
+}
+
+if ($yuqueEnabled) {
+    $yuqueArgs = @((Join-Path $scriptDir "sync_leetcode_to_yuque.py"), "--input", $inputPath)
+    if ($configPath) { $yuqueArgs += @("--config", $configPath) }
+    try {
+        $yuqueDryRunOutput = & python @($yuqueArgs + "--dry-run") 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "YuQue dry-run failed:`n$($yuqueDryRunOutput -join "`n")" }
+        $yuqueOutput = & python @yuqueArgs 2>&1
+        $yuqueExitCode = $LASTEXITCODE
+        $yuqueText = $yuqueOutput -join "`n"
+        try { $yuqueResult = $yuqueText | ConvertFrom-Json } catch { $yuqueResult = $yuqueText }
+        if ($yuqueExitCode -ne 0) { $providerFailures += "YuQue: publication incomplete; inspect yuqueSync statuses." }
+    } catch {
+        $yuqueResult = "failed"
+        $providerFailures += "YuQue: $($_.Exception.Message)"
     }
-    $syncResult = $syncOutput -join "`n"
 }
 
 if (Test-Path -LiteralPath $functionUsagePath) {
@@ -253,4 +302,8 @@ if (Test-Path -LiteralPath $functionUsagePath) {
     commit = $commit
     pushed = (-not $NoPush)
     siyuanSync = $syncResult
+    yuqueSync = $yuqueResult
+    payloadPath = $inputPath
+    notePreviewPath = $renderedNotePath
+    failures = $providerFailures
 } | ConvertTo-Json -Depth 10

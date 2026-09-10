@@ -12,7 +12,7 @@ from typing import Any
 def load_json(path: str | None, fallback: Any) -> Any:
     if not path:
         return fallback
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
 
 
 def as_list(values: list[str] | None) -> list[str]:
@@ -70,14 +70,12 @@ def main() -> int:
         parser.error("--problem-title or metadataJson.problemTitle is required")
     if not thinking:
         parser.error("--thinking or metadataJson.thinking is required")
-    if not commit:
-        parser.error("--commit or metadataJson.commit is required")
     solution_java = first_text(
         args.solution_java,
         metadata.get("solutionJava"),
         metadata.get("solutionContent"),
     )
-    tags = dict(tag_plan.get("tags", {}))
+    tags = dict(tag_plan.get("tags", metadata.get("tags", {})))
     function_common_tags = [
         str(item.get("commonFunction") or "")
         for item in function_usage.get("usages", [])
@@ -94,15 +92,22 @@ def main() -> int:
         "complexityMarkdown": args.complexity_markdown or metadata.get("complexityMarkdown", ""),
         "pitfalls": as_list(args.pitfall or metadata.get("pitfalls", [])),
         "tags": tags,
-        "tagEvidence": tag_plan.get("tagEvidence", {}),
-        "conceptKnowledge": tag_plan.get("conceptKnowledge", {}),
-        "functionUsages": function_usage.get("usages", []),
-        "readiness": readiness,
-        "conversationDigest": conversation_digest,
-        "git": {
-            "commit": commit,
-        },
+        "tagEvidence": tag_plan.get("tagEvidence", metadata.get("tagEvidence", {})),
+        "conceptKnowledge": tag_plan.get("conceptKnowledge", metadata.get("conceptKnowledge", {})),
+        "functionUsages": function_usage.get("usages", metadata.get("functionUsages", [])),
+        "readiness": readiness or metadata.get("readiness", {}),
+        "conversationDigest": conversation_digest or metadata.get("conversationDigest", {}),
+        "git": {"commit": commit} if commit else metadata.get("git", {}),
     }
+
+    # Pass through authored material without summarizing, coercing, or discarding it.
+    for key in ("problemUrl", "noteContent", "teachingTranscript", "solutionVariants",
+                "trainingMarkdown", "reviewMarkdown", "sourceMarkdown", "sourceMetadata", "yuque"):
+        if key in metadata:
+            payload[key] = metadata[key]
+
+    from render_learning_note import build_sections
+    build_sections(payload)  # Validate the new shapes before emitting a payload.
 
     Path(args.output).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0

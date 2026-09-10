@@ -1,6 +1,6 @@
 ---
 name: leetcode-interview-coach
-description: LeetCode interview hand-coding training system for this repository. Use when Codex needs to scaffold a Java LeetCode problem, coach the user through algorithm thinking, review or polish the user's solution, insert the final answer, extract a current-problem learning digest from the coaching conversation, update repository notes, commit and push, assess interview readiness, plan reviews, configure first-run/new-machine SiYuan setup, or sync the completed learning record into the user's SiYuan interview-prep wiki with concept backlinks and audit logs.
+description: LeetCode interview hand-coding training system for this repository. Use when Codex needs to scaffold a Java LeetCode problem, coach the user through algorithm thinking, review or polish the user's solution, insert the final answer, extract a current-problem learning digest from the coaching conversation, update repository notes, commit and push, assess interview readiness, plan reviews, configure first-run/new-machine publishing, or sync the completed learning record directly to YuQue or into the user's SiYuan interview-prep wiki.
 ---
 
 # LeetCode Interview Coach
@@ -10,8 +10,8 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 ## Module Routing
 
 - **First-run or new-machine setup**: read `references/first-run-setup-flow.md`.
-  - Triggers: "首次运行", "换机器", "配置思源", "本机配置", "激活完整能力", "API Token", "workspacePath", cloned repository setup.
-  - Output: missing-information checklist, local config path, detected SiYuan workspace, API reachability, selected notebook, system root HPath, remaining blockers.
+  - Triggers: "首次运行", "换机器", "配置思源", "配置语雀", "发布目标", "本机配置", "激活完整能力", "API Token", "workspacePath", cloned repository setup.
+  - Output: missing-information checklist, local config path, enabled publishing targets, API reachability, selected SiYuan notebook or YuQue repository/parent path, remaining blockers.
 
 - **Scaffold a problem**: read `references/scaffold-flow.md`.
   - Triggers: "添加这题", "创建结构", "scaffold", "新建题目", pasted problem statement with a request to add it.
@@ -27,6 +27,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
   - Output: readiness status, weak points, interview expression quality, next review actions.
 
 - **Finish a completed solution**: read `references/finish-flow.md`.
+  - Also read `references/note-template.md` before composing a note; it governs full teaching records, answer variants, and comment-preserving layout.
   - Triggers: "最终答案", "帮我整理", "帮我提交", "收尾", "这版通过了", "一次运行成功".
   - Output: integrated Java answer, updated project note, readiness assessment, Maven compile, Git commit, push, optional SiYuan sync.
 
@@ -37,6 +38,10 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - **Sync to SiYuan wiki**: read `references/siyuan-api-flow.md`.
   - Triggers: "同步思源", "生成 wiki 笔记", or finish flow with SiYuan enabled.
   - Output: problem page link, touched concept/review page links, audit log link, sync status.
+
+- **Publish directly to YuQue**: read `references/yuque-api-flow.md`.
+  - Triggers: "发布到语雀", "同步语雀", "推送语雀", or finish flow with YuQue enabled.
+  - Output: created or updated document link, repository and parent path, slug, publish status, and any retryable failure.
 
 - **Apply SiYuan wiki policy**: read `references/siyuan-wiki-policy.md`.
   - Use when deciding where a problem, concept, review status, or audit log should be written in the user's existing SiYuan system.
@@ -74,6 +79,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - Prefer Chinese responses in this repository.
 - Coach like a careful interview teacher, not a note reader: observe the user's attempt, ask focused questions, preserve useful intuition, and tighten the explanation toward hand-coding ability.
 - When reviewing user-written code, treat the latest user version as the baseline: preserve its identifiers and structure, propose minimal in-place changes, and defer naming or style cleanup until the solution is correct unless the current form directly causes a compile or correctness issue.
+- Preserve the user's own comments in learning records and answer variants. Keep obsolete or incorrect comments with adjacent explicit corrections; do not silently delete or rewrite them. Distinguish coach mistakes from user mistakes.
 - Keep modules decoupled. Do not make scaffold depend on coaching, Git, or SiYuan. Do not make low-level SiYuan API code depend on LeetCode note policy. Use finish flow only as the orchestrator.
 - Use this skill's bundled scripts directly; do not route through legacy scaffold tooling.
 - Never edit SiYuan `.sy` files directly. Use official HTTP APIs only.
@@ -102,11 +108,11 @@ When the user reaches a final answer:
 4. Generate a tag plan with evidence.
 5. Detect reusable Java API usage with `references/common-function-flow.md`. Add confirmed common-function tags, update repository notes under `src/notes/03.常用函数`, and ensure SiYuan common-function concept pages receive concrete examples under `## 常见代码结构`.
 6. Generate or verify concept knowledge for every confirmed tag. Use local knowledge first; if missing, search reputable open references when network is available and create structured `conceptKnowledge`.
-7. Generate a current-problem conversation digest. Include only the interaction about this problem from scaffold/coaching to closeout; exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
+7. Extract one current-problem learning record following `references/note-template.md` and `references/conversation-digest-schema.md`: ordered teaching transcript, real effective solution variants, and concise digest. The digest does not replace full teaching history. Exclude old problems, skill iteration, migration, environment debugging, and unrelated chat.
 8. Generate an interview-readiness assessment and review labels.
 9. Run `mvn -q -DskipTests compile`.
 10. Commit and push through the bundled finish script, using `scripts/write_utf8_metadata.py` or an existing UTF-8 JSON file when Chinese text is involved.
-11. If SiYuan is enabled, run a sync dry-run, discover the actual API URL, write the learning record, validate current-block Markdown, and report failure without rolling back Git.
+11. Publish the same provider-neutral learning record used to render the repository note. If SiYuan is enabled, run its sync dry-run and write path. If YuQue is enabled, back up the exact existing target, run its read-only dry-run and native-format publish path independently. Report writing, directory association, and verification separately; failed read-back must never trigger duplicate creation. A provider failure never rolls back Git or prevents the other enabled provider from running.
 
 ## User-Facing Closeout
 
@@ -118,6 +124,7 @@ After finishing work, report:
 - changed files
 - Maven compile status
 - SiYuan problem page link and concept page links when synced
+- YuQue document link, repository/parent path, and create/update status when published
 - readiness status and next review actions when available
 - any skipped or failed step
 
