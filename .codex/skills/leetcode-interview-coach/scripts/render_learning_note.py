@@ -300,7 +300,8 @@ def build_sections(payload: dict[str, Any]) -> list[NoteSection]:
                 section = {"kind": "collapse", "title": variant_title, "collapsed": True, "markdown": "\n\n".join(parts)}
             if index == 0:
                 section["heading"] = "答案版本" if len(variants) > 1 else "最终题解"
-            section["codeTitle"] = variant_title + ("（最终版本）" if variant.get("isFinal") is True else "")
+            final_suffix = "（最终版本）"
+            section["codeTitle"] = variant_title if not variant.get("isFinal") or variant_title.endswith(final_suffix) else variant_title + final_suffix
             sections.append(section)
     elif _text(payload.get("solutionJava")):
         sections.append({"kind": "markdown", "heading": "最终题解", "codeTitle": "最终题解", "markdown": _fenced_code(payload["solutionJava"])})
