@@ -8,7 +8,7 @@ import unittest
 from urllib.parse import unquote
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from render_yuque_lake import LakeRenderer, inspect_lake, render_lake, verify_lake
+from render_yuque_lake import LakeRenderer, inspect_lake, render_lake, verify_lake, _LakeParser, _walk
 
 
 CODE = '''class Solution {
@@ -85,18 +85,69 @@ class LakeTests(unittest.TestCase):
         body = LakeRenderer().markdown("```java\nreturn 1;\n```\n\n```java\nreturn 2;\n```")
         self.assertEqual(inspect_lake(body)["codeNames"], ["Java 示例代码", "Java 示例代码（代码 2）"])
 
+    def test_plain_text_fences_use_plain_mode_without_changing_content_or_name(self):
+        code = "  1\n 1 1\n1 2 1  "
+        for language in ["", "text", "plaintext", "plain", "java"]:
+            with self.subTest(language=language):
+                renderer = LakeRenderer()
+                body = renderer.markdown(f"```{language}\n{code}\n```", code_names=iter(["三角形示意"]))
+                parsed = inspect_lake(body)
+                self.assertEqual(parsed["codes"], [("java" if language == "java" else "plain", code)])
+                self.assertEqual(parsed["codeNames"], ["三角形示意"])
+        self.assertEqual(inspect_lake(LakeRenderer().code(code, ""))["codes"], [("plain", code)])
+
     def test_code_characters_are_never_markdown_interpreted(self):
         code = '\t// **保留** <xml> & "引号" \\\nString x = "```";  \nint[] a = {1, 2};'
         body = LakeRenderer().markdown("````java\n" + code + "\n````")
         self.assertEqual(inspect_lake(body)["codes"], [("java", code)])
         self.assertEqual(inspect_lake(body)["bold"], [])
 
-    def test_quote_contains_real_code_card(self):
+    def test_quote_is_split_around_real_code_card(self):
         body = LakeRenderer().markdown("> 一段讲解\n>\n> ~~~~java\n> if (a < b) {\n>     a++;\n> }\n> ~~~~\n>\n> 后续问题")
         parsed = inspect_lake(body)
-        self.assertEqual(parsed["quotes"], 1)
+        self.assertEqual(parsed["quotes"], 2)
         self.assertEqual(parsed["codes"], [("java", "if (a < b) {\n    a++;\n}")])
         self.assertEqual(parsed["text"], "一段讲解后续问题")
+        self.assertEqual(parsed["flow"], [("text", "一段讲解"), ("code", "java", "if (a < b) {\n    a++;\n}"), ("text", "后续问题")])
+        self.assertEqual([node.tag for node in _LakeParser(body).root.children], ["blockquote", "card", "blockquote"])
+
+    def test_multiple_diagrams_stay_between_their_coach_explanations(self):
+        payload = {
+            "teachingTranscript": [{
+                "role": "assistant",
+                "contentMarkdown": "先看第一行。\n\n```text\n1\n```\n\n再看第二行。\n\n```text\n1 1\n```\n\n第三行。\n\n```text\n1 2 1\n```\n\n中间的数字从哪里来？",
+                "codeBlockNames": ["第一行", "第二行", "第三行"],
+            }],
+        }
+        body = render_lake(payload)
+        parsed = inspect_lake(body)
+        self.assertEqual(parsed["codeNames"], ["第一行", "第二行", "第三行"])
+        self.assertEqual(parsed["codes"], [("plain", "1"), ("plain", "1 1"), ("plain", "1 2 1")])
+        flow = parsed["flow"]
+        self.assertTrue(flow[0][1].endswith("先看第一行。"))
+        self.assertEqual(flow[1:6], [("code", "plain", "1"), ("text", "再看第二行。"), ("code", "plain", "1 1"), ("text", "第三行。"), ("code", "plain", "1 2 1")])
+        self.assertEqual(flow[6], ("text", "中间的数字从哪里来？"))
+        for node in _walk(_LakeParser(body).root):
+            if node.tag == "blockquote":
+                self.assertFalse(any(child.tag == "card" for child in _walk(node)))
+
+    def test_quoted_list_code_does_not_remain_under_a_quote(self):
+        body = LakeRenderer().markdown("> - 先解释\n>\n>   ```java\n>   int answer = 1;\n>   ```\n>\n>   再提问")
+        parsed = inspect_lake(body)
+        self.assertEqual(parsed["flow"], [("text", "先解释"), ("code", "java", "int answer = 1;"), ("text", "再提问")])
+        self.assertIn("<ul ", body)
+        for node in _walk(_LakeParser(body).root):
+            if node.tag == "blockquote":
+                self.assertFalse(any(child.tag == "card" for child in _walk(node)))
+
+    def test_readback_detects_cards_moved_after_all_prose(self):
+        expected = LakeRenderer().markdown("> 先讲解\n>\n> ```java\n> int answer = 1;\n> ```\n>\n> 再提问")
+        card = re.search(r"<card\b.*?</card>", expected).group()
+        moved = expected.replace(card, "") + card
+        expected_parts, moved_parts = inspect_lake(expected), inspect_lake(moved)
+        self.assertEqual(expected_parts["text"], moved_parts["text"])
+        self.assertEqual(expected_parts["codes"], moved_parts["codes"])
+        self.assertTrue(any("交错顺序" in error for error in verify_lake(expected, {"body_lake": moved})))
 
     def test_bold_link_inline_code_and_markup_safety(self):
         body = LakeRenderer().markdown("**先计算 `answer`**。 [链接](<https://example.com/a(b)?x=1&y=2>)\n\n<script>alert(1)</script>")

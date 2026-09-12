@@ -10,6 +10,8 @@
 
 - 新 `teachingTranscript` / `solutionVariants` payload：共享 `render_learning_note.build_sections()`，经独立 `render_yuque_lake.render_lake()` 输出 `format=lake`。源是主代理提取的真实学习记录，渲染器不总结聊天。
 - 原生结构依据用户参考稿实际 Open API `body_lake` 核对：`<!doctype lake>`、`<details class="lake-collapse" open="false">`、`<summary class="lake-summary">`，代码为 URI 编码 JSON 的 `codeblock` 卡片。代码卡片的 `name` 填入具体用途或解法名称，回读时一并核验，避免编辑器显示空白“请输入代码块名称”。引用、代码、链接、加粗分别渲染，代码字符与原注释不改写。
+- 引用讲解中的代码卡片必须与引用段平级，按「引用讲解 → 独立代码卡片 → 后续引用讲解」输出。语雀阅读器会把嵌在引用内的卡片移到整段引用之后；raw Lake 回读不一定反映这种重排。浏览器验收需展开教学流程，核对示例／代码与前后讲解的实际位置。
+- 纯文本代码块的源 Markdown 保留 `text`，Lake 卡片适配为 `plain`，不要把 `text` 原样传入后误显示 LaTeX。该映射已在 E118 语雀阅读器中实测为 Plain Text；同结构编辑器亦有 [Plain Text 模式定义](https://cdn.jsdelivr.net/npm/@aomao/plugin-codeblock@2.10.1/src/component/mode.ts)。这是实现与实测依据，不是语雀官方格式保证。
 - 仓库 Markdown 的 `<details>` 只是可读表示，不能作为普通 Markdown 直接上传并宣称原生折叠完成。旧 payload 保持可读兼容；无法可靠转换的旧 HTML 折叠应先改为结构化素材，不静默降级。
 - [官方格式接口说明](https://github.com/yuque/yuque-mcp-server/blob/main/docs/capability-scope.md)：Lake/html 使用 legacy `/repos/{owner}/{repo}/docs/{id}`；Markdown 的 YMD 读取使用 `/yfm/docs?doc_id=<数字 ID>`。Lake 备份及排版验证必须取 raw `body_lake`，不能拿导出的 Markdown 当完整恢复依据。
 

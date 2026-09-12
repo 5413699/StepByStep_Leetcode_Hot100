@@ -142,13 +142,18 @@ class LakeRenderer:
         return value if len(value) <= 56 else value[:55] + "…"
 
     def code(self, code: str, language: str, name: str = "") -> str:
+        # Lake's code card uses the editor mode identifier, not the Markdown
+        # fence label. The same-structure @aomao/plugin-codeblock 2.10.1 mode
+        # table names `plain` as Plain Text; YuQue UI verification is still part
+        # of publication. Keep authored Markdown and all non-text modes intact.
+        mode = "plain" if language.strip().lower() in {"", "text", "plaintext"} else language
         language_label = {"java": "Java", "text": "文本"}.get(language, language or "文本")
         title = name.strip() or f"{language_label} 示例代码"
         self.code_names[title] = self.code_names.get(title, 0) + 1
         if self.code_names[title] > 1:
             title += f"（代码 {self.code_names[title]}）"
         card = {
-            "mode": language or "text", "code": code, "autoWrap": False,
+            "mode": mode, "code": code, "autoWrap": False,
             "lineNumbers": True, "heightLimit": False, "collapsed": False,
             # The reference Lake codeblock stores its visible toolbar title in
             # name, with the same value in search. A heading outside the card
@@ -175,6 +180,42 @@ class LakeRenderer:
     def _special(line: str) -> bool:
         return bool(_FENCE.match(line) or _HEADING.match(line) or _LIST.match(line)
                     or re.match(r"^ {0,3}>", line) or re.fullmatch(r"\s*(?:---+|\*\*\*+|___+)\s*", line))
+
+    def quote_around_cards(self, content: str) -> str:
+        """Lake viewers eject cards from quotes; quote only the prose runs.
+
+        Keep the card at its original position, including inside a list. A
+        container holding a card stays outside the quote and its prose children
+        are quoted separately, so no code card has a blockquote ancestor.
+        """
+        def has_card(node: Any) -> bool:
+            return isinstance(node, _Node) and any(
+                child.tag == "card" and child.attrs.get("name") == "codeblock"
+                for child in _walk(node)
+            )
+
+        def quote_children(children: list[Any]) -> str:
+            parts: list[str] = []
+            prose: list[str] = []
+
+            def flush() -> None:
+                if prose:
+                    parts.append(self.element("blockquote", "".join(prose)))
+                    prose.clear()
+
+            for child in children:
+                if not has_card(child):
+                    prose.append(_node_html(child))
+                    continue
+                flush()
+                if child.tag == "card":
+                    parts.append(_node_html(child))
+                else:
+                    parts.append(_node_html(child, body=quote_children(child.children)))
+            flush()
+            return "".join(parts)
+
+        return quote_children(_LakeParser(content).root.children)
 
     def markdown(self, source: str, *, code_title: str = "", context: str = "", speaker: str = "", code_names: Iterator[str] | None = None) -> str:
         lines = source.replace("\r\n", "\n").replace("\r", "\n").split("\n")
@@ -221,7 +262,8 @@ class LakeRenderer:
                 while index < len(lines) and re.match(r"^ {0,3}>", lines[index]):
                     quoted.append(re.sub(r"^ {0,3}> ?", "", lines[index], count=1))
                     index += 1
-                parts.append(self.element("blockquote", self.markdown("\n".join(quoted), code_title=code_title, context=nearby_context or heading_context, speaker=speaker, code_names=code_names)))
+                quoted_content = self.markdown("\n".join(quoted), code_title=code_title, context=nearby_context or heading_context, speaker=speaker, code_names=code_names)
+                parts.append(self.quote_around_cards(quoted_content))
                 continue
             item = _LIST.match(line)
             if item:
@@ -339,6 +381,16 @@ def _walk(node: _Node):
             yield from _walk(child)
 
 
+def _node_html(node: Any, *, body: str | None = None) -> str:
+    if isinstance(node, str):
+        return escape(node, quote=False)
+    attributes = "".join(f' {key}="{escape(value, quote=True)}"' for key, value in node.attrs.items())
+    if node.tag in {"meta", "br", "hr", "img", "input", "link", "wbr"}:
+        return f"<{node.tag}{attributes} />"
+    content = body if body is not None else "".join(_node_html(child) for child in node.children)
+    return f"<{node.tag}{attributes}>{content}</{node.tag}>"
+
+
 def _node_text(node: _Node) -> str:
     if node.tag in {"br", "hr"}:
         return "\n"
@@ -350,11 +402,43 @@ def _canonical(value: str) -> str:
     return re.sub(r"\s+", "", value.replace("\u200b", "").replace("\ufeff", ""))
 
 
+def _content_flow(node: _Node) -> list[tuple[str, ...]]:
+    """Compare code positions among prose, not just separate text/code lists."""
+    result: list[tuple[str, ...]] = []
+    prose: list[str] = []
+
+    def flush() -> None:
+        text = _canonical("".join(prose))
+        if text:
+            result.append(("text", text))
+        prose.clear()
+
+    def visit(current: Any) -> None:
+        if isinstance(current, str):
+            prose.append(current)
+            return
+        if current.tag == "card" and current.attrs.get("name") == "codeblock":
+            value = current.attrs.get("value", "")
+            try:
+                data = json.loads(unquote(value[5:] if value.startswith("data:") else value))
+            except (ValueError, TypeError):
+                data = {}
+            flush()
+            result.append(("code", data.get("mode", "text"), data.get("code", "")))
+            return
+        for child in current.children:
+            visit(child)
+
+    visit(node)
+    flush()
+    return result
+
+
 def inspect_lake(source: str) -> dict[str, Any]:
     """Semantic fingerprint; IDs/style rewrites do not invalidate read-back."""
     parsed = _LakeParser(source)
     nodes = list(_walk(parsed.root))
-    result: dict[str, Any] = {"text": _canonical(_node_text(parsed.root)), "codes": [], "codeNames": [], "collapses": [], "headings": [], "links": [], "quotes": 0, "bold": []}
+    result: dict[str, Any] = {"text": _canonical(_node_text(parsed.root)), "flow": _content_flow(parsed.root), "codes": [], "codeNames": [], "collapses": [], "headings": [], "links": [], "quotes": 0, "bold": []}
     for node in nodes:
         if node.tag == "card":
             try:
@@ -392,6 +476,7 @@ def verify_lake(expected_body: str, actual_doc: dict[str, Any]) -> list[str]:
     expected, actual = inspect_lake(expected_body), inspect_lake(body)
     checks = [
         (expected["text"] == actual["text"], "回读正文与预览的文字或顺序不一致。"),
+        (expected["flow"] == actual["flow"], "回读代码块与讲解正文的交错顺序不一致。"),
         (expected["codes"] == actual["codes"], "回读代码块的语言、字符、注释或顺序不一致。"),
         (expected["codeNames"] == actual["codeNames"], "回读代码块名称缺失或不一致。"),
         (expected["collapses"] == actual["collapses"], "回读原生折叠的标题、数量或默认收起状态不一致。"),
