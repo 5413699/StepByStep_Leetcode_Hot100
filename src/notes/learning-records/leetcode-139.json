@@ -123,11 +123,12 @@
     },
     {
       "role": "assistant",
-      "contentMarkdown": "先把 `memo[i]` 的含义讲清楚：**它记录的是“从下标 `i` 开始，一直到末尾的整段字符串，能否拆分”。**\n\n例如：\n\n```text\ns = \"leetcode\"\n     01234567\n\nmemo[4] = true\n```\n\n这表示：**整个 `\"code\"` 已经确认可以拆分。** 它不是表示“拆分进行到了下标 4”。\n\n所以不需要寻找“最后一个 `true`”，也不要求数组中的 `true` 连续。每个位置都保存一个独立问题的答案。\n\n当 `start = 0` 匹配到 `\"leet\"` 后，接下来要判断 `\"code\"`：\n\n```java\ndfs(s, wordDict, 4)\n```\n\n如果之前已经算出 `memo[4] = true`，这次就能直接返回 `true`，因为剩下的整段已经确认可行。\n\n至于我刚才问的默认值问题，是另一个细节：我们需要区分三种情况：\n\n| 记录的值 | 含义 |\n|---|---|\n| `null` | 还没计算 |\n| `true` | 算过，可以拆分 |\n| `false` | 算过，无法拆分 |\n\nJava 可以用 `Boolean[]` 保存这三种状态，初始值都是 `null`。\n\n先确认核心含义：**如果 `memo[3] = false`，它表示前 3 个字符无法拆分，还是从下标 3 开始的整个后缀无法拆分？**",
+      "contentMarkdown": "先把 `memo[i]` 的含义讲清楚：**它记录的是“从下标 `i` 开始，一直到末尾的整段字符串，能否拆分”。**\n\n例如：\n\n```text\ns = \"leetcode\"\n     01234567\n\nmemo[4] = true\n```\n\n这表示：**整个 `\"code\"` 已经确认可以拆分。** 它不是表示“拆分进行到了下标 4”。\n\n所以不需要寻找“最后一个 `true`”，也不要求数组中的 `true` 连续。每个位置都保存一个独立问题的答案。\n\n当 `start = 0` 匹配到 `\"leet\"` 后，接下来要判断 `\"code\"`：\n\n```java\ndfs(s, wordDict, 4)\n```\n\n如果之前已经算出 `memo[4] = true`，这次就能直接返回 `true`，因为剩下的整段已经确认可行。\n\n至于我刚才问的默认值问题，是另一个细节：我们需要区分三种情况：\n\n记录的值与含义：\n\n- `null`：还没计算。\n- `true`：算过，可以拆分。\n- `false`：算过，无法拆分。\n\nJava 可以用 `Boolean[]` 保存这三种状态，初始值都是 `null`。\n\n先确认核心含义：**如果 `memo[3] = false`，它表示前 3 个字符无法拆分，还是从下标 3 开始的整个后缀无法拆分？**",
       "codeBlockNames": [
         "缓存表示整个后缀的答案",
         "查询从下标4开始的后缀"
-      ]
+      ],
+      "sourceMarkdown": "先把 `memo[i]` 的含义讲清楚：**它记录的是“从下标 `i` 开始，一直到末尾的整段字符串，能否拆分”。**\n\n例如：\n\n```text\ns = \"leetcode\"\n     01234567\n\nmemo[4] = true\n```\n\n这表示：**整个 `\"code\"` 已经确认可以拆分。** 它不是表示“拆分进行到了下标 4”。\n\n所以不需要寻找“最后一个 `true`”，也不要求数组中的 `true` 连续。每个位置都保存一个独立问题的答案。\n\n当 `start = 0` 匹配到 `\"leet\"` 后，接下来要判断 `\"code\"`：\n\n```java\ndfs(s, wordDict, 4)\n```\n\n如果之前已经算出 `memo[4] = true`，这次就能直接返回 `true`，因为剩下的整段已经确认可行。\n\n至于我刚才问的默认值问题，是另一个细节：我们需要区分三种情况：\n\n| 记录的值 | 含义 |\n|---|---|\n| `null` | 还没计算 |\n| `true` | 算过，可以拆分 |\n| `false` | 算过，无法拆分 |\n\nJava 可以用 `Boolean[]` 保存这三种状态，初始值都是 `null`。\n\n先确认核心含义：**如果 `memo[3] = false`，它表示前 3 个字符无法拆分，还是从下标 3 开始的整个后缀无法拆分？**"
     },
     {
       "role": "user",
@@ -348,7 +349,8 @@
   ],
   "sourceMetadata": {
     "source": "当前 M139 训练对话原文，保留所有可恢复教学问答和代码；仅解码 HTML 实体并规范 Java 空白。",
-    "userReportedOnlineAcceptance": false
+    "userReportedOnlineAcceptance": false,
+    "presentationNormalization": "三态对照表在语雀阅读器中不显示，呈现时改为含义相同的列表；该轮完整原文另存于 sourceMarkdown，未改教学内容。"
   },
   "thinkingMarkdown": "用 dfs(start) 判断整个后缀是否可拆分，枚举匹配前缀并逐层传回成功结果；使用 Boolean[] 缓存各起点的成功或失败，消除重复子问题。",
   "yuque": {
