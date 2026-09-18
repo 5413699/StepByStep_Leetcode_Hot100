@@ -1,0 +1,261 @@
+{
+  "problemTitle": "M322-零钱兑换",
+  "statementMarkdown": "给你一个整数数组 `coins`，表示不同面额的硬币；以及一个整数 `amount`，表示总金额。\n\n计算并返回可以凑成总金额所需的 **最少的硬币个数**。如果没有任何一种硬币组合能组成总金额，返回 `-1`。\n\n你可以认为每种硬币的数量是无限的。\n\n**示例 1**\n\n输入：`coins = [1, 2, 5], amount = 11`\n\n输出：`3`\n\n解释：`11 = 5 + 5 + 1`。\n\n**示例 2**\n\n输入：`coins = [2], amount = 3`\n\n输出：`-1`。\n\n**示例 3**\n\n输入：`coins = [1], amount = 0`\n\n输出：`0`。\n\n**提示**\n\n- `1 <= coins.length <= 12`。\n- `1 <= coins[i] <= 2^31 - 1`。\n- `0 <= amount <= 10^4`。",
+  "thinkingMarkdown": "定义 dp[i] 为凑出金额 i 的最少硬币数，枚举最后一枚硬币，以 dp[i-coins[j]]+1 更新最小值。金额递增计算，旧状态可已包含同种硬币，因此支持重复使用；amount+1 表示不可达，过大的面额只跳过当前枚举。",
+  "processMarkdown": "",
+  "solutionJava": "import java.util.Arrays;\n\nclass Solution {\n    public int coinChange(int[] coins, int amount) {\n        // 记录每个金额需要的硬币数\n        int[] dp = new int[amount + 1];\n        // 先将所有金额标记为暂时无法凑出\n        Arrays.fill(dp, amount + 1);\n\n        // 0元不需要硬币\n        dp[0] = 0;\n        // 计算最少需要的硬币个数\n        for (int i = 1; i <= amount; i++) {\n            // 枚举每一枚硬币\n            for (int j = 0; j < coins.length; j++) {\n                // 假如当前硬币超过了需要金额，说明凑不出了\n                // 补充：只是当前这枚硬币不能用，其他面额仍需继续尝试。\n                if (coins[j] > i) {\n                    continue;\n                }\n                // 假如加入当前硬币\n                dp[i] = Math.min(dp[i - coins[j]] + 1, dp[i]);\n            }\n        }\n        // 假如最后都还没凑出来\n        if (dp[amount] == amount + 1) {\n            return -1;\n        }\n\n        return dp[amount];\n    }\n}",
+  "complexityMarkdown": "令 `A = amount`，`m = coins.length`。\n\n- **时间 O(A × m)**：对每个正金额枚举全部面额；初始化另需 O(A+1)。包含 `A=0` 时可统一写作 O((A+1) × m)，实际零金额直接跳过循环，仅需常数时间。\n- **额外空间 O(A)**：`dp` 有 `A+1` 个元素；严格包含零金额时写作 O(A+1)。输入数组不会被修改。\n- **重复使用**：`dp[i-coins[j]]` 的最优方案可已含面额 `coins[j]`，再加一枚即可继续使用。金额递增且面额为正，所有依赖下标都小于 `i`。\n- **不可达标记**：每枚硬币至少为 1，若某个金额能凑出，任一方案的硬币数不超过该金额。`amount+1` 大于所有合法答案；不可达旧状态加 1 后更大，不会误更新当前最小值。\n- **整数范围**：`amount<=10000`，哨兵加 1 至多为 10002，不溢出。面额可能为 `Integer.MAX_VALUE`，先比较 `coins[j]>i` 再跳过，可避免负下标；不要先算 `i+coins[j]`。若改用最大整数作哨兵，必须防止不可达状态直接加 1。\n- **零金额**：`dp[0]=0`，外层不执行，直接返回 0。\n- **边界用例**：`[2],6→3`（重复使用），`[5,1],3→3`（无序），`[2],3→-1`（无解），`[1],0→0`（零金额），`[1],10000→10000`（最大数量）。",
+  "pitfalls": [],
+  "tags": {
+    "dataStructures": [
+      "数组"
+    ],
+    "methods": [
+      "动态规划"
+    ],
+    "patterns": [],
+    "commonFunctions": [
+      "数组Array的常用函数",
+      "数学Math的常用函数"
+    ],
+    "readiness": [
+      "提示后完成",
+      "需要二刷"
+    ]
+  },
+  "tagEvidence": {
+    "数组": "int[] coins 保存面额，int[] dp 按金额索引保存最少数量。",
+    "动态规划": "复用更小金额 dp[i-coins[j]] 的最优解并对候选取最小值。",
+    "数组Array的常用函数": "Arrays.fill 把全部状态初始化为不可达标记。",
+    "数学Math的常用函数": "Math.min 比较当前最小值和加入一枚硬币后的候选。",
+    "提示后完成": "用户根据反馈修正循环边界和 break，并在解释后理解重复使用。",
+    "需要二刷": "重复使用、未排序面额和目标状态边界值得通过独立重写检验。"
+  },
+  "conceptKnowledge": {
+    "数学Math的常用函数": {
+      "intro": "Math.min 返回两个数的较小值，最小数量动态规划用它保存已有最优值与新候选中的较小者。",
+      "signals": [
+        "要求凑出目标的最少数量，需要在多个候选间取最小值",
+        "每个旧状态加本次代价后形成一个新的候选答案"
+      ],
+      "template": [
+        "Arrays.fill(dp, amount + 1);",
+        "dp[0] = 0;",
+        "if (coins[j] <= i) {",
+        "    dp[i] = Math.min(dp[i], dp[i - coins[j]] + 1);",
+        "}"
+      ],
+      "pitfalls": [
+        "Math.min 不修改实参，需要保存返回值",
+        "加法先于比较发生；若用 MAX_VALUE 代表不可达，须先判断以免溢出"
+      ],
+      "sources": [
+        {
+          "label": "Oracle Java Math.min(int, int)",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Math.html#min(int,int)",
+          "note": "沿用仓库 Math.min.md 中已核验的官方来源和返回较小值的定义。"
+        }
+      ]
+    }
+  },
+  "functionUsages": [
+    {
+      "id": "math-min",
+      "functionName": "Math.min",
+      "commonFunction": "数学Math的常用函数",
+      "notePath": "src/notes/03.常用函数/10.数学Math/Math.min.md",
+      "signature": "Math.min(int a, int b)",
+      "summary": "`Math.min(a, b)` 返回两个数中较小的一个，常用于维护最少次数、最低代价等候选答案。它是静态方法，两个 int 参数对应的返回值也是 int。",
+      "whenToUse": [
+        "需要在两个候选答案中保留较小值",
+        "动态规划枚举多个来源，要不断更新组成当前状态的最少次数或代价",
+        "需要把当前最优答案与新候选比较，并把返回值保存回状态变量"
+      ],
+      "exampleTitle": "零钱兑换：枚举最后一枚硬币，维护最少硬币数",
+      "exampleCode": "int[] dp = new int[amount + 1];\nArrays.fill(dp, amount + 1);\ndp[0] = 0;\nfor (int i = 1; i <= amount; i++) {\n    for (int coin : coins) {\n        if (coin > i) {\n            continue;\n        }\n        dp[i] = Math.min(dp[i], dp[i - coin] + 1);\n    }\n}\nint answer = dp[amount] == amount + 1 ? -1 : dp[amount];",
+      "pitfalls": [
+        "`Math.min` 只返回较小值，需要用 `dp[i] = ...` 保存结果",
+        "不可达金额不能保留默认 0；面额均为正时，`amount + 1` 大于所有合法硬币数量，可作为安全哨兵",
+        "参数里的加法先计算；若用 `Integer.MAX_VALUE` 表示不可达，必须先判断依赖状态，避免加 1 溢出",
+        "先检查面额不超过当前金额，再读取 `dp[i - coin]`；面额未排序时，过大只跳过当前硬币，不能结束枚举"
+      ],
+      "sources": [
+        {
+          "label": "Oracle Java Math.min(int, int)",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Math.html#min(int,int)",
+          "note": "官方文档定义了静态方法 `min(int a, int b)`：返回两个 int 中较小的值；相等时返回该值。"
+        }
+      ],
+      "problemTitle": "M322-零钱兑换",
+      "problemNotePath": "src/notes/01.按数据结构分类/01.数组/M322_零钱兑换.md"
+    },
+    {
+      "id": "arrays-fill",
+      "functionName": "Arrays.fill",
+      "commonFunction": "数组Array的常用函数",
+      "notePath": "src/notes/03.常用函数/01.数组Array/Arrays.fill.md",
+      "signature": "Arrays.fill(int[] a, int val)",
+      "summary": "把数组或数组的一段区间批量填成同一个值，常用于初始化 DP 数组、visited 数组或棋盘行。",
+      "whenToUse": [
+        "需要把一维数组整体初始化成同一个默认值",
+        "二维数组需要逐行初始化，例如 `Arrays.fill(board[i], '.')`",
+        "需要重置可复用数组状态"
+      ],
+      "exampleTitle": "零钱兑换：初始化不可达金额，再单独设置零金额",
+      "exampleCode": "int[] dp = new int[amount + 1];\n// 先把所有金额标记为不可达。\nArrays.fill(dp, amount + 1);\n// 凑出 0 元不需要硬币，作为转移起点。\ndp[0] = 0;",
+      "pitfalls": [
+        "先填充哨兵，再设置 `dp[0] = 0`；顺序相反会覆盖零金额的初始值",
+        "新建 int 数组默认全为 0，但 0 不能表示无法凑出的正金额",
+        "`Arrays.fill(int[] a, int val)` 原地修改数组，返回值为 void，不需要重新赋给 dp",
+        "区间重载的右边界 `toIndex` 是开区间"
+      ],
+      "sources": [
+        {
+          "label": "Oracle Java Arrays.fill(int[], int)",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html#fill(int%5B%5D,int)",
+          "note": "官方文档定义了 `fill(int[] a, int val)`：将指定 int 值赋给数组中的每个元素。"
+        }
+      ],
+      "problemTitle": "M322-零钱兑换",
+      "problemNotePath": "src/notes/01.按数据结构分类/01.数组/M322_零钱兑换.md"
+    }
+  ],
+  "readiness": {
+    "status": [
+      "提示后完成",
+      "需要二刷"
+    ],
+    "skills": [
+      "一维最小值动态规划",
+      "不可达状态初始化",
+      "枚举最后一枚硬币"
+    ],
+    "weakPoints": [
+      "独立重写尚未验证",
+      "循环上下界与 continue/break 的选择",
+      "复杂度口述尚未验证"
+    ],
+    "interviewExpression": "基本可用",
+    "nextReview": [
+      "2 天后独立重写",
+      "7 天后口述"
+    ]
+  },
+  "conversationDigest": {
+    "firstReaction": "在教练联系完全平方数并定义状态后，用户能写出最小值转移和零金额初始化。",
+    "stuckPoints": [
+      "不明白每次只加一枚如何支持同一种硬币多次使用",
+      "初稿漏算目标金额，并在遇到过大面额时提前退出枚举"
+    ],
+    "misconceptions": [
+      {
+        "before": "觉得内层每次只加一枚，可能无法表示同面额重复使用",
+        "after": "dp[i-coins[j]] 的方案可已经用过同种硬币，再加一枚即可。"
+      },
+      {
+        "before": "外层 i<amount，漏掉目标状态",
+        "after": "dp[0] 已初始化，计算 i=1..amount。"
+      },
+      {
+        "before": "当前面额过大就 break",
+        "after": "coins 未排序，只能 continue 跳过当前面额。"
+      }
+    ],
+    "breakthroughs": [
+      "理解旧状态所代表的方案会保留已用硬币，转移自然支持重复使用",
+      "能解释不可达状态不能用 0 表示"
+    ],
+    "implementationNotes": [
+      "保留用户全部 8 条原注释，补充当前面额不能用的限定",
+      "使用 Arrays.fill 初始化 amount+1",
+      "内层先检查面额，再读取较小金额状态"
+    ],
+    "edgeCases": [
+      "amount=0 返回 0",
+      "未排序面额不能 break",
+      "无解保留哨兵并返回 -1",
+      "大面额先跳过，安全哨兵避免加一溢出"
+    ],
+    "interviewExpression": "固定最后一枚硬币，以剩余金额的最少数量加一更新；较小状态可含同种硬币，因此支持无限使用。",
+    "reviewAdvice": [
+      "2 天后独立重写并验证循环边界",
+      "7 天后口述重复使用与不可达状态"
+    ],
+    "conceptUpdates": [
+      {
+        "concept": "动态规划",
+        "note": "旧状态的方案可包含当前面额，按金额递增更新即可复用；与完全平方数相比，需要保留真正不可达的状态。"
+      }
+    ]
+  },
+  "git": {},
+  "problemUrl": "https://leetcode.cn/problems/coin-change/",
+  "teachingTranscript": [
+    {
+      "role": "user",
+      "contentMarkdown": "[322. 零钱兑换](https://leetcode.cn/problems/coin-change/)\n\n给你一个整数数组 `coins`，表示不同面额的硬币；以及一个整数 `amount`，表示总金额。\n\n计算并返回可以凑成总金额所需的 **最少的硬币个数**。如果没有任何一种硬币组合能组成总金额，返回 `-1`。\n\n你可以认为每种硬币的数量是无限的。\n\n**示例 1**\n\n输入：`coins = [1, 2, 5], amount = 11`\n\n输出：`3`\n\n解释：`11 = 5 + 5 + 1`。\n\n**示例 2**\n\n输入：`coins = [2], amount = 3`\n\n输出：`-1`。\n\n**示例 3**\n\n输入：`coins = [1], amount = 0`\n\n输出：`0`。\n\n**提示**\n\n- `1 <= coins.length <= 12`。\n- `1 <= coins[i] <= 2^31 - 1`。\n- `0 <= amount <= 10^4`。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "这题和你刚做完的「完全平方数」很接近：**把“可选的平方数”换成“可选的硬币面额”**，仍然是在求凑出一个数最少需要几个。\n\n但多了一个关键区别：完全平方数总能用 `1` 凑出来，零钱兑换可能凑不出来，比如用面额 `2` 凑金额 `3`。\n\n我们先沿用你熟悉的动态规划思路。\n\n**1. `dp[i]` 表示什么？**\n\n定义为：**凑成金额 `i` 所需的最少硬币数**。\n\n注意，`i` 是金额，不是硬币在数组里的下标。最后要求的是 `dp[amount]`。\n\n**2. 考虑“最后放入哪枚硬币”**\n\n以 `coins = [1, 2, 5]`、金额 `11` 为例：\n\n- 最后一枚放 `1`：先凑出 `10`，需要 `dp[10] + 1` 枚。\n- 最后一枚放 `2`：先凑出 `9`，需要 `dp[9] + 1` 枚。\n- 最后一枚放 `5`：先凑出 `6`，需要 `dp[6] + 1` 枚。\n\n这里的 `+1`，就是最后放入的那枚硬币。**从能凑出来的方案里选最小值即可。**\n\n上一题你枚举 `j * j`，这题就枚举 `coins` 中的每个面额 `coin`；只有 `coin <= i` 时，才有可能拿它凑金额 `i`。\n\n先试着回答两个问题：\n\n1. 假设金额 `i - coin` 能凑出来，选择一枚 `coin` 后，应该怎样用 `dp[i - coin]` 更新 `dp[i]`？可以照着上一题的 `Math.min` 写。\n2. `dp[0]` 应该是多少？对于 `coins = [2]`，金额 `1` 凑不出来，能不能也用 `0` 表示它的最少硬币数？为什么？"
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "1. `Math.min(dp[i-coin]+1,dp[i])`\n2. `dp[0] = 0;` 0元不需要硬币，对于 `coins = [2]`，金额 `1` 凑不出来，不能用 `0` 表示它的最少硬币数，这会导致后面的计算如果用到 `dp[1]` 时出错。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "两点都对，尤其是你已经意识到：**把“凑不出来”记成 `0`，会让后续状态误以为它不需要硬币就能凑出。**\n\n你的转移写成赋值语句就是：\n\n```java\ndp[i] = Math.min(dp[i], dp[i - coin] + 1);\n```\n\n接下来解决“凑不出来用什么表示”。\n\n每枚硬币的面额至少是 `1`，所以金额 `amount` **如果能凑出来，所需硬币数一定不超过 `amount`**。因此可以用 `amount + 1` 表示暂时凑不出来：\n\n```java\nint[] dp = new int[amount + 1];\n// 先将所有金额标记为暂时无法凑出\nArrays.fill(dp, amount + 1);\n// 凑出0元不需要硬币\ndp[0] = 0;\n```\n\n`Arrays.fill(数组, 值)` 就是把数组中的每个元素都设为这个值。\n\n例如 `coins = [2]`、`amount = 3`，初始为：\n\n```text\ndp = [0, 4, 4, 4]\n```\n\n计算金额 `3` 时，虽然可以考虑放一枚 `2`，但剩下的金额 `1` 凑不出来：\n\n```text\ndp[3] = Math.min(4, dp[1] + 1);\n      = Math.min(4, 5);\n      = 4;\n```\n\n它仍然保留“无法凑出”的标记，不会产生假答案。\n\n这题如果直接用 `Integer.MAX_VALUE`，就要先判断前一个状态是否可达，否则不可达状态再 `+1` 会溢出；用 `amount + 1` 更方便。\n\n现在可以尝试写完整 Java 了：外层从金额 `1` 遍历到 `amount`，内层枚举每一种硬币。动笔前再确认两点：\n\n1. 如果 `coin > i`，还能访问 `dp[i - coin]` 吗？该怎样限制转移？\n2. 最后如果 `dp[amount]` 仍然是 `amount + 1`，应该返回什么？否则返回什么？",
+      "codeBlockNames": [
+        "最少硬币数的状态转移",
+        "不可达状态与零金额初始化",
+        "金额 3 的初始状态",
+        "不可达状态的转移演算"
+      ],
+      "correctionMarkdown": "排版说明：教练的连续等式原先标为 Java，实际是手算过程，不能直接编译；这里保留演算文字并改为纯文本代码块。"
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "```java\nclass Solution {\n    public int coinChange(int[] coins, int amount) {\n        // 记录每个金额需要的硬币数\n        int[] dp = new int[amount + 1];\n        // 先将所有金额标记为暂时无法凑出\n        Arrays.fill(dp, amount + 1);\n\n        // 0元不需要硬币\n        dp[0] = 0;\n        // 计算最少需要的硬币个数\n        for (int i = 0; i < amount; i++) {\n            // 枚举每一枚硬币\n            for (int j = 0; j < coins.length; j++) {\n                // 假如当前硬币超过了需要金额，说明凑不出了\n                if (coins[j] > i) {\n                    break;\n                }\n                // 假如加入当前硬币\n                dp[i] = Math.min(dp[i - coins[j]] + 1, dp[i]);\n            }\n        }\n        // 假如最后都还没凑出来\n        if (dp[amount] == amount + 1) {\n            return -1;\n        }\n\n        return dp[amount];\n    }\n}\n```\n\n这是我当前的想法，但总感觉没法表示用多次同种硬币的情况。",
+      "codeBlockNames": [
+        "我的初稿：遗漏目标金额并提前退出枚举"
+      ],
+      "correctionMarkdown": "历史初稿原样保留：外层 `i < amount` 漏算目标金额；内层 `break` 对未排序的面额会漏掉后续可用硬币。后续反馈分别指出这两处。原注释“说明凑不出了”只应限定为当前这枚硬币不能用。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "你的转移**已经支持同一种硬币使用多次**，因为 `dp[i - coins[j]]` 对应的方案中，就可能已经用过这种硬币了。\n\n比如只有面额 `2`，要凑金额 `6`：\n\n```text\ndp[0] = 0\ndp[2] = dp[0] + 1 = 1    → 一枚2\ndp[4] = dp[2] + 1 = 2    → 两枚2\ndp[6] = dp[4] + 1 = 3    → 三枚2\n```\n\n计算 `dp[6]` 时，**是在凑出 `4` 的方案上，再加一枚 `2`**。所以不需要额外写循环，枚举“同一种硬币用了几次”。\n\n你的代码需要修正两处。\n\n**① 外层必须计算到 `amount`**\n\n现在是：\n\n```java\nfor(int i = 0; i < amount; i++){\n```\n\n这会漏掉目标金额 `amount`。而 `dp[0]` 已经初始化，所以改为：\n\n```java\nfor(int i = 1; i <= amount; i++){\n```\n\n**② 当前硬币太大时，用 `continue`，不能用 `break`**\n\n```java\nif(coins[j] > i){\n    continue;\n}\n```\n\n因为题目**没有保证 `coins` 按升序排列**。\n\n例如 `coins = [5, 1]`，正在计算金额 `1`：\n\n- 遇到 `5`，这枚硬币不能用。\n- 但后面的 `1` 可以用。\n- `break` 会直接结束内层循环，漏掉后面的 `1`；`continue` 只跳过当前这枚硬币。\n\n因此，你注释里的“说明凑不出了”需要补充限定：**只是当前这枚硬币不能参与凑出金额 `i`，其他硬币还可以继续尝试。**\n\n其余初始化、转移和返回逻辑都正确。先改这两处，再自测：\n\n- `[2]`，金额 `6`：验证重复使用，预期 `3`。\n- `[5, 1]`，金额 `3`：验证面额无序，预期 `3`。\n- `[2]`，金额 `3`：验证无法凑出，预期 `-1`。\n- `[1]`，金额 `0`：验证边界，预期 `0`。",
+      "codeBlockNames": [
+        "同种硬币重复使用的状态链",
+        "初稿的金额循环边界",
+        "覆盖目标金额的循环边界",
+        "跳过当前过大的面额"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "```java\nclass Solution {\n    public int coinChange(int[] coins, int amount) {\n        // 记录每个金额需要的硬币数\n        int[] dp = new int[amount + 1];\n        // 先将所有金额标记为暂时无法凑出\n        Arrays.fill(dp, amount + 1);\n\n        // 0元不需要硬币\n        dp[0] = 0;\n        // 计算最少需要的硬币个数\n        for (int i = 1; i <= amount; i++) {\n            // 枚举每一枚硬币\n            for (int j = 0; j < coins.length; j++) {\n                // 假如当前硬币超过了需要金额，说明凑不出了\n                if (coins[j] > i) {\n                    continue;\n                }\n                // 假如加入当前硬币\n                dp[i] = Math.min(dp[i - coins[j]] + 1, dp[i]);\n            }\n        }\n        // 假如最后都还没凑出来\n        if (dp[amount] == amount + 1) {\n            return -1;\n        }\n\n        return dp[amount];\n    }\n}\n```\n\n做出来了，因为 `dp[i - coins[j]]` 对应的方案中，就可能已经用过这种硬币了。正好是我卡住的点，你讲解后我明白了不少，谢谢，进行收尾流程吧！",
+      "codeBlockNames": [
+        "我完成的金额递增 DP 实现"
+      ],
+      "correctionMarkdown": "最终算法正确。原注释全部保留；“说明凑不出了”只指当前硬币不可用，不代表当前金额整体无解。单列答案增加相邻说明，并补上 `import java.util.Arrays;`，方便在标准 Java 环境中复制编译。"
+    }
+  ],
+  "solutionVariants": [
+    {
+      "title": "金额递增的一维动态规划",
+      "language": "java",
+      "code": "import java.util.Arrays;\n\nclass Solution {\n    public int coinChange(int[] coins, int amount) {\n        // 记录每个金额需要的硬币数\n        int[] dp = new int[amount + 1];\n        // 先将所有金额标记为暂时无法凑出\n        Arrays.fill(dp, amount + 1);\n\n        // 0元不需要硬币\n        dp[0] = 0;\n        // 计算最少需要的硬币个数\n        for (int i = 1; i <= amount; i++) {\n            // 枚举每一枚硬币\n            for (int j = 0; j < coins.length; j++) {\n                // 假如当前硬币超过了需要金额，说明凑不出了\n                // 补充：只是当前这枚硬币不能用，其他面额仍需继续尝试。\n                if (coins[j] > i) {\n                    continue;\n                }\n                // 假如加入当前硬币\n                dp[i] = Math.min(dp[i - coins[j]] + 1, dp[i]);\n            }\n        }\n        // 假如最后都还没凑出来\n        if (dp[amount] == amount + 1) {\n            return -1;\n        }\n\n        return dp[amount];\n    }\n}",
+      "timeComplexity": "O(amount × coins.length)，amount=0 时 O(1)",
+      "spaceComplexity": "O(amount)，精确为 O(amount+1)",
+      "isFinal": true,
+      "explanation": "适用于每种面额可无限使用、求精确凑出目标金额所需最少硬币数的问题。固定最后一枚硬币，复用剩余金额的最优解；不需要排序，也不需要显式枚举每种硬币的使用次数。",
+      "correctionMarkdown": "保留我的 dp、i、j、coins、amount、循环结构和全部 8 条原注释。仅调整格式、补充 Arrays 导入，并在含义不完整的原注释后增加限定说明；没有改变最终算法。"
+    }
+  ],
+  "trainingMarkdown": "- 我能写出 `Math.min(dp[i-coin]+1, dp[i])`，并解释 `dp[0]=0`：0 元不需要硬币。\n- 我意识到不可达金额不能记为 0，否则会污染后续状态；教练随后讲解用 `amount+1` 作为不可达标记。\n- 我最主要的卡点是：内层每次只加一枚硬币，怎么表示同种硬币重复使用。教练用 `dp[2] → dp[4] → dp[6]` 解释旧方案已经包含同种硬币，我随后能复述这个原因。\n- 我的初稿有两处实现问题：`i < amount` 漏算目标金额；当前硬币太大时用 `break`，会漏掉未排序数组中后面的可用面额。我按反馈改成 `i <= amount` 和 `continue`。\n- 我的最终转移与返回逻辑正确。原注释“说明凑不出了”含义不完整，保留原话并补充其只针对当前面额的说明。",
+  "reviewMarkdown": "**面试表达（整理稿）**：定义 `dp[i]` 为凑出金额 `i` 的最少硬币数。固定最后一枚面额为 `coin` 的硬币，若 `coin<=i`，候选数量是 `dp[i-coin]+1`，对所有面额取最小值。初始化 `dp[0]=0`，其余为安全上界 `amount+1`。金额从小到大计算，较小金额的最优解已经求出，也可以已经使用相同面额，因此支持无限次使用。最后目标状态仍为哨兵则返回 -1，否则返回其值。时间 O(amount × coins.length)，额外空间 O(amount)。\n\n**教练评估**：提示后完成，需要二刷。学习者已能写出转移、识别不可达状态不能用 0，以及解释同种硬币重复使用；独立重写、复杂度口述和循环边界检查还需要复习验证。\n\n- 2 天后不看答案重写，先说清 `dp[i]`、哨兵和 `+1` 的含义。\n- 手推 `coins=[2]` 的 `dp[0..6]`，解释奇数不可达、偶数如何重复使用面额 2。\n- 用 `[5,1]`、金额 3 解释为什么必须 `continue`；检查金额循环包含目标。\n- 7 天后口述完整思路，对比完全平方数与本题在“状态是否一定可达”上的区别。",
+  "sourceMetadata": {
+    "description": "来源为本任务中 322 零钱兑换从题目请求到收尾请求的全部可见教学问答。仅规范消息转义、空白及代码语言；省去技能调用标记与操作进度。"
+  }
+}

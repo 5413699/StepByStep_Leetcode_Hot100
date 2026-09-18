@@ -298,11 +298,60 @@ def unique(items: list[str]) -> list[str]:
 
 def detect_function_usages(solution_java: str, *, problem_title: str = "", problem_note_path: str = "") -> list[dict[str, Any]]:
     usages: list[dict[str, Any]] = []
+    coin_change_context = bool(
+        re.search(r"\bcoinChange\s*\(", solution_java)
+        or (re.search(r"\bcoins\b", solution_java) and re.search(r"\bamount\b", solution_java))
+    )
     for definition in FUNCTION_DEFINITIONS:
         if not any(re.search(pattern, solution_java) for pattern in definition["patterns"]):
             continue
         usage = {key: value for key, value in definition.items() if key != "patterns"}
-        if usage.get("id") == "stack-basic-methods" and "decodeString" in solution_java:
+        if usage.get("id") == "math-min" and coin_change_context:
+            usage["exampleTitle"] = "零钱兑换：枚举最后一枚硬币，维护最少硬币数"
+            usage["exampleCode"] = (
+                "int[] dp = new int[amount + 1];\n"
+                "Arrays.fill(dp, amount + 1);\n"
+                "dp[0] = 0;\n"
+                "for (int i = 1; i <= amount; i++) {\n"
+                "    for (int coin : coins) {\n"
+                "        if (coin > i) {\n"
+                "            continue;\n"
+                "        }\n"
+                "        dp[i] = Math.min(dp[i], dp[i - coin] + 1);\n"
+                "    }\n"
+                "}\n"
+                "int answer = dp[amount] == amount + 1 ? -1 : dp[amount];"
+            )
+            usage["pitfalls"] = [
+                "`Math.min` 只返回较小值，需要用 `dp[i] = ...` 保存结果",
+                "不可达金额不能保留默认 0；面额均为正时，`amount + 1` 大于所有合法硬币数量，可作为安全哨兵",
+                "参数里的加法先计算；若用 `Integer.MAX_VALUE` 表示不可达，必须先判断依赖状态，避免加 1 溢出",
+                "先检查面额不超过当前金额，再读取 `dp[i - coin]`；面额未排序时，过大只跳过当前硬币，不能结束枚举",
+            ]
+        elif usage.get("id") == "arrays-fill" and coin_change_context:
+            usage["signature"] = "Arrays.fill(int[] a, int val)"
+            usage["exampleTitle"] = "零钱兑换：初始化不可达金额，再单独设置零金额"
+            usage["exampleCode"] = (
+                "int[] dp = new int[amount + 1];\n"
+                "// 先把所有金额标记为不可达。\n"
+                "Arrays.fill(dp, amount + 1);\n"
+                "// 凑出 0 元不需要硬币，作为转移起点。\n"
+                "dp[0] = 0;"
+            )
+            usage["pitfalls"] = [
+                "先填充哨兵，再设置 `dp[0] = 0`；顺序相反会覆盖零金额的初始值",
+                "新建 int 数组默认全为 0，但 0 不能表示无法凑出的正金额",
+                "`Arrays.fill(int[] a, int val)` 原地修改数组，返回值为 void，不需要重新赋给 dp",
+                "区间重载的右边界 `toIndex` 是开区间",
+            ]
+            usage["sources"] = [
+                {
+                    "label": "Oracle Java Arrays.fill(int[], int)",
+                    "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html#fill(int%5B%5D,int)",
+                    "note": "官方文档定义了 `fill(int[] a, int val)`：将指定 int 值赋给数组中的每个元素。",
+                }
+            ]
+        elif usage.get("id") == "stack-basic-methods" and "decodeString" in solution_java:
             usage["exampleTitle"] = "字符串解码中保存括号层状态"
             usage["exampleCode"] = (
                 "Stack<Integer> countStack = new Stack<>();\n"

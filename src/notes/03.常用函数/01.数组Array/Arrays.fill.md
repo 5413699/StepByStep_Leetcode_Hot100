@@ -14,27 +14,30 @@
 
 ## 常见代码结构
 
-### 按行初始化二维棋盘
+### 零钱兑换：初始化不可达金额，再单独设置零金额
 
 ```java
-char[][] board = new char[n][n];
-for (int i = 0; i < n; i++) {
-    Arrays.fill(board[i], '.');
-}
+int[] dp = new int[amount + 1];
+// 先把所有金额标记为不可达。
+Arrays.fill(dp, amount + 1);
+// 凑出 0 元不需要硬币，作为转移起点。
+dp[0] = 0;
 ```
 
 ## 易错点
 
-- 二维数组不能一次 `Arrays.fill(board, '.')`，要按行填充
-- 对象数组使用 `Arrays.fill` 会把同一个对象引用放到每个位置
+- 先填充哨兵，再设置 `dp[0] = 0`；顺序相反会覆盖零金额的初始值
+- 新建 int 数组默认全为 0，但 0 不能表示无法凑出的正金额
+- `Arrays.fill(int[] a, int val)` 原地修改数组，返回值为 void，不需要重新赋给 dp
 - 区间重载的右边界 `toIndex` 是开区间
 
 ## 题目使用记录
 
 - H051-N皇后：把数组或数组的一段区间批量填成同一个值，常用于初始化 DP 数组、visited 数组或棋盘行。（题目笔记：`src/notes/01.按数据结构分类/01.数组/H051_N皇后.md`）
+- M322-零钱兑换：把数组或数组的一段区间批量填成同一个值，常用于初始化 DP 数组、visited 数组或棋盘行。（题目笔记：`src/notes/01.按数据结构分类/01.数组/M322_零钱兑换.md`）
 
 ## 来源依据
 
-- Oracle Java Arrays API：官方文档定义了 `fill(char[] a, char val)` 及区间重载。 (https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html)
+- Oracle Java Arrays.fill(int[], int)：官方文档定义了 `fill(int[] a, int val)`：将指定 int 值赋给数组中的每个元素。 (https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html#fill(int%5B%5D,int))
 
 <!-- codex-common-function-end -->
