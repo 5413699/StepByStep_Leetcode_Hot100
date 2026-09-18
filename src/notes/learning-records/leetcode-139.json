@@ -1,0 +1,354 @@
+{
+  "problemTitle": "M139-单词拆分",
+  "problemUrl": "https://leetcode.cn/problems/word-break/",
+  "statementMarkdown": "给你一个字符串 `s` 和一个字符串列表 `wordDict` 作为字典。如果可以利用字典中出现的一个或多个单词拼接出 `s`，则返回 `true`。\n\n**注意：** 不要求字典中出现的单词全部都使用，并且字典中的单词可以重复使用。\n\n## 示例\n\n### 示例 1\n\n```text\n输入：s = \"leetcode\", wordDict = [\"leet\", \"code\"]\n输出：true\n解释：\"leetcode\" 可以由 \"leet\" 和 \"code\" 拼接成。\n```\n\n### 示例 2\n\n```text\n输入：s = \"applepenapple\", wordDict = [\"apple\", \"pen\"]\n输出：true\n解释：\"applepenapple\" 可以由 \"apple\"、\"pen\"、\"apple\" 拼接成。\n注意：字典中的单词可以重复使用。\n```\n\n### 示例 3\n\n```text\n输入：s = \"catsandog\", wordDict = [\"cats\", \"dog\", \"sand\", \"and\", \"cat\"]\n输出：false\n```\n\n## 提示\n\n- `1 <= s.length <= 300`\n- `1 <= wordDict.length <= 1000`\n- `1 <= wordDict[i].length <= 20`\n- `s` 和 `wordDict[i]` 仅由小写英文字母组成\n- `wordDict` 中的所有字符串互不相同",
+  "thinking": "用 dfs(start) 判断整个后缀是否可拆分，枚举匹配前缀并逐层传回成功结果；使用 Boolean[] 缓存各起点的成功或失败，消除重复子问题。",
+  "solutionJava": "    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        Boolean[] memo = new Boolean[s.length()];\n        return dfs(s, wordDict, start, memo);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start, Boolean[] memo) {\n        // 如果已经完成了拆分\n        if (start == s.length()) {\n            return true;\n        }\n\n        // 这个后缀已经计算过，直接使用结果\n        if (memo[start] != null) {\n            return memo[start];\n        }\n\n        for (String word : wordDict) {\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length(), memo)) {\n                    memo[start] = true;\n                    return true;\n                }\n            }\n        }\n\n        memo[start] = false;\n        return false;\n    }",
+  "teachingTranscript": [
+    {
+      "role": "assistant",
+      "contentMarkdown": "先从思路开始：**从字符串开头尝试拆分时，你会怎样找出第一个单词可能在哪里结束？** 可以先用最直观的方法描述。"
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "找字典长度与s对应前缀长度相同的部分"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "对，你的意思是：**遍历字典里的每个单词，取 `s` 开头相同长度的部分，判断内容是否相等。** 注意先保证单词长度不超过 `s` 的长度。\n\n例如：\n\n```text\ns = \"leetcode\"\nword = \"leet\"\n前 4 个字符是 \"leet\" → 匹配，剩下 \"code\"\n```\n\n这样就找到了第一个单词的候选。\n\n接着想一步：**如果某个单词匹配了前缀，但剩余字符串无法拆分，能直接返回 `false` 吗？为什么？**",
+      "codeBlockNames": [
+        "前缀匹配示例"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "不能，因为可能有其他单词也能匹配部分前缀，但该单词剩下的字符串可以拆分"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "对。**一条拆分路径失败，只能说明这次选择不行；所有候选都失败，才能返回 `false`。** 只要有一条路径能拆完整个字符串，就返回 `true`。\n\n我们可以用递归表达这个过程：\n\n> `dfs(start)`：从下标 `start` 开始的剩余字符串，能否用字典中的单词拼出来？\n\n你接着补两个细节：\n\n1. 如果当前位置匹配了单词 `word`，下一次递归的起点应该是什么？\n2. 如果 `start == s.length()`，应该返回什么？为什么？"
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "1.word.length\n2.true，因为这说明整个s已经被字典中的单词表示出来了",
+      "correctionMarkdown": "勘误：下一次起点应为 start + word.length()；word.length() 只是本次前进距离，不是新的绝对下标。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "第 2 点正确：走到字符串末尾，说明整条拆分路径成功，返回 `true`。\n\n第 1 点需要加上**当前起点**，下一次递归应该是：\n\n```java\ndfs(start + word.length())\n```\n\n因为 `word.length()` 是这次向前走的距离。例如：\n\n```text\nleetcode\n先匹配 leet：start = 0，下一起点 = 0 + 4 = 4\n再匹配 code：start = 4，下一起点 = 4 + 4 = 8\n```\n\n现在想一下：遍历字典时，匹配成功就递归判断剩余部分。**如果这次递归返回 `false`，应该继续遍历；那么整个 `dfs(start)` 的 `return false` 应该放在循环内部，还是循环结束后？**",
+      "codeBlockNames": [
+        "下一次递归起点",
+        "起点累加示例"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "`return false`  应该放在循环结束后，只有所有可能的前缀都找不到能拼成s的方案时，才确定找不到，此时再返回false，放在循环内部会导致提前返回"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "对，**只有所有候选都尝试失败，当前的 `dfs(start)` 才能返回 `false`。** 如果某次递归成功，就可以立即返回 `true`。\n\n现在可以试着把这个递归思路写成 Java。判断某个单词是否匹配当前位置，可以直接用：\n\n```java\ns.startsWith(word, start)\n```\n\n它表示：`s` 从下标 `start` 开始，是否以 `word` 开头。\n\n你先实现这两个方法：\n\n```java\npublic boolean wordBreak(String s, List<String> wordDict)\n\nprivate boolean dfs(String s, List<String> wordDict, int start)\n```\n\n`wordBreak` 从 `start = 0` 发起递归。先写出这个版本，我们再分析有没有重复计算。",
+      "codeBlockNames": [
+        "指定起点的前缀匹配",
+        "递归方法签名"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "```java\nclass Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        return dfs(s, wordDict, start);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start) {\n        for (String word : wordDict) {\n            // 如果已经完成了拆分\n            if (start == s.length()) {\n                return true;\n            }\n\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startWith(word, start)) {\n                dfs(s, wordDict, start + word.length());\n            }\n        }\n\n        return false;\n    }\n}\n```\n\n这是我的想法",
+      "codeBlockNames": [
+        "我的第一次递归实现"
+      ],
+      "correctionMarkdown": "勘误：String 的方法名为 startsWith；此外，单独调用 dfs(...) 会丢弃递归返回值，必须在下一层返回 true 时让当前层也返回 true。本题 wordDict 非空，因此终止判断放在循环内不影响这次版本的逻辑判断，但移到循环前更清楚。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "整体递归结构已经搭出来了，需要修正两处。\n\n1. **方法名拼写**：`s.startWith(...)` 应改成 `s.startsWith(...)`，中间有一个 `s`。\n2. **递归的返回值没有被使用**：即使更深一层找到了合法拆分，返回了 `true`，当前这一层也会继续循环，最终返回 `false`。\n\n把你这部分原地改成：\n\n```java\n// 如果s 从下标 start 开始，以 word 开头。\nif (s.startsWith(word, start)) {\n    if (dfs(s, wordDict, start + word.length())) {\n        return true;\n    }\n}\n```\n\n这里对应你之前说的逻辑：\n\n- 递归返回 `true`：找到完整方案，立即向上一层返回 `true`。\n- 递归返回 `false`：继续尝试字典中的其他单词。\n- 全部尝试失败：执行循环后面的 `return false`。\n\n例如 `\"leetcode\"`，走到 `start = 8` 时产生的 `true`，需要经过 `start = 4`、`start = 0` **逐层传回 `wordBreak`**。递归调用本身不会自动替当前方法返回结果。",
+      "codeBlockNames": [
+        "传递递归成功结果"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "```java\nclass Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        return dfs(s, wordDict, start);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start) {\n        for (String word : wordDict) {\n            // 如果已经完成了拆分\n            if (start == s.length()) {\n                return true;\n            }\n\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                dfs(s, wordDict, start + word.length());\n            }\n        }\n\n        return false;\n    }\n}\n```\n\n**递归的返回值没有被使用**：  这里我并不理解",
+      "codeBlockNames": [
+        "修正方法名后仍未使用返回值的实现"
+      ],
+      "correctionMarkdown": "勘误：这里已修正 startsWith 的拼写，但仍未判断 dfs(...) 的返回值，成功结果会被丢弃；此处保留提问时的原始错误实现。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "关键是：**`return true` 只会结束当前这一次方法调用，并把结果交给调用它的上一层。上一层要自己决定怎么处理这个结果。**\n\n虽然递归都叫 `dfs`，但每一层是独立的调用，有自己的 `start`。\n\n用你的 `\"leetcode\"` 走一遍：\n\n```text\ndfs(start = 0)\n  匹配 \"leet\"，调用 dfs(start = 4)\n    匹配 \"code\"，调用 dfs(start = 8)\n      到达末尾，返回 true\n```\n\n现在，`true` 返回到了 `start = 4` 这一层。它刚才执行的是：\n\n```java\ndfs(s, wordDict, start + word.length());\n```\n\n这行代码的意思只有：**调用方法，让它执行。** 你没有接收或判断结果，所以返回的 `true` 被丢掉了。\n\n于是 `start = 4` 这一层继续往下执行，循环结束后遇到：\n\n```java\nreturn false;\n```\n\n它就把 `false` 返回给了上一层。**下一层成功了，这一层却没有把成功结果传出去。**\n\n所以，需要改成：\n\n```java\nif (dfs(s, wordDict, start + word.length())) {\n    return true;\n}\n```\n\n这里有两个动作：\n\n1. `if (dfs(...))`：检查下一层返回的结果。\n2. `return true`：如果下一层成功，当前这一层也向上一层报告成功。\n\n这样，成功结果才能一路传回来：\n\n```text\nstart = 8 返回 true\n    ↓\nstart = 4 判断结果为 true，自己也返回 true\n    ↓\nstart = 0 判断结果为 true，自己也返回 true\n    ↓\nwordBreak 返回 true\n```\n\n你在 `wordBreak` 中写的 `return dfs(...)`，就已经是在**把调用结果返回出去**；而单独写 `dfs(...);`，只是执行调用。",
+      "codeBlockNames": [
+        "递归到达字符串末尾",
+        "只执行递归调用",
+        "当前层返回失败",
+        "判断并返回递归结果",
+        "成功结果逐层返回"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "```java\nclass Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        return dfs(s, wordDict, start);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start) {\n        for (String word : wordDict) {\n            // 如果已经完成了拆分\n            if (start == s.length()) {\n                return true;\n            }\n\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length())) {\n                    return true;\n                }\n            }\n        }\n\n        return false;\n    }\n}\n```\n\n做出来了，帮我完成收尾",
+      "codeBlockNames": [
+        "我的纯 DFS 实现"
+      ],
+      "correctionMarkdown": "更新说明：此版本在题目给定字典非空的约束下逻辑正确，保留了用户把终止判断放在循环内的原始结构。纯 DFS 可能反复求解同一后缀，最坏为指数级时间；后续继续学习并实现记忆化。用户此处表示完成，未提供线上 AC 记录。"
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "还有需要学习的地方吗，那先继续学习，再继续收尾"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "有，接下来最需要学的是 **重复子问题与记忆化**。你的递归逻辑已经正确，但有些相同的计算会重复做，最坏情况下会超时。我们先学会这个优化，再收尾。\n\n看这个例子：\n\n```text\ns = \"aaaaab\"\nwordDict = [\"a\", \"aa\"]\n```\n\n走到 `start = 2`，可以有不同的路径：\n\n```text\n路径一：先选 \"a\"，再选 \"a\" → start = 2\n路径二：直接选 \"aa\"       → start = 2\n```\n\n两条路径接下来都会调用：\n\n```java\ndfs(s, wordDict, 2)\n```\n\n也就是判断剩余的 `\"aaab\"` 能否拆分。\n\n想一下：**这两次调用的答案，会因为前面选的是 `\"a\" + \"a\"` 还是 `\"aa\"` 而不同吗？为什么？**",
+      "codeBlockNames": [
+        "重复子问题示例",
+        "到达相同起点的两条路径",
+        "重复的递归调用"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "不会，因为a是aa的子集，效果一样",
+      "correctionMarkdown": "结论正确；原因应是两条路径到达相同 start，剩余字符串和可用字典相同。单词可重复使用，因此不需要记录之前选过什么；这不是子集关系的结论。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "“不会”这个结论正确，不过关键原因是：**两条路径都到达了同一个 `start`，接下来要解决的问题完全相同。**\n\n此时：\n\n- 剩余字符串都是 `\"aaab\"`。\n- 可用字典相同。\n- 单词可以重复使用，之前选过什么不会消耗字典中的单词。\n\n所以，答案只取决于 `start`，与之前怎样拆分无关。这里不需要用“子集”来解释。\n\n于是可以增加一个记录：\n\n> `memo[start]`：从 `start` 开始的剩余字符串能否拆分。\n\n第一次算出结果后保存，再遇到相同的 `start` 就直接返回。\n\n先想一个实现细节：**如果用 `boolean[] memo`，默认值都是 `false`，你能区分“这个位置还没计算过”和“已经计算过，确定无法拆分”吗？**"
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "这里我有些迷茫，因为如果能拆分，memo[i]为true，最后一个true之后感觉就没法判断了"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "先把 `memo[i]` 的含义讲清楚：**它记录的是“从下标 `i` 开始，一直到末尾的整段字符串，能否拆分”。**\n\n例如：\n\n```text\ns = \"leetcode\"\n     01234567\n\nmemo[4] = true\n```\n\n这表示：**整个 `\"code\"` 已经确认可以拆分。** 它不是表示“拆分进行到了下标 4”。\n\n所以不需要寻找“最后一个 `true`”，也不要求数组中的 `true` 连续。每个位置都保存一个独立问题的答案。\n\n当 `start = 0` 匹配到 `\"leet\"` 后，接下来要判断 `\"code\"`：\n\n```java\ndfs(s, wordDict, 4)\n```\n\n如果之前已经算出 `memo[4] = true`，这次就能直接返回 `true`，因为剩下的整段已经确认可行。\n\n至于我刚才问的默认值问题，是另一个细节：我们需要区分三种情况：\n\n| 记录的值 | 含义 |\n|---|---|\n| `null` | 还没计算 |\n| `true` | 算过，可以拆分 |\n| `false` | 算过，无法拆分 |\n\nJava 可以用 `Boolean[]` 保存这三种状态，初始值都是 `null`。\n\n先确认核心含义：**如果 `memo[3] = false`，它表示前 3 个字符无法拆分，还是从下标 3 开始的整个后缀无法拆分？**",
+      "codeBlockNames": [
+        "缓存表示整个后缀的答案",
+        "查询从下标4开始的后缀"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "从下标 3 开始的整个后缀无法拆分"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "对，含义准确。\n\n接下来让每层递归共用这份记录。在 `wordBreak` 中创建：\n\n```java\nBoolean[] memo = new Boolean[s.length()];\n```\n\n把 `memo` 作为额外参数传给 `dfs`，递归调用时也传同一个数组。\n\n然后把你原来的结束判断移到 `dfs` 开头，再检查缓存：\n\n```java\n// 如果已经完成了拆分\nif (start == s.length()) {\n    return true;\n}\n\n// 这个后缀已经计算过，直接使用结果\nif (memo[start] != null) {\n    return memo[start];\n}\n```\n\n结束判断要放在前面，因为 `start == s.length()` 时，已经不在数组下标范围内。\n\n**缓存没有结果时，继续执行你原来的循环。** 现在还差“保存结果”：\n\n你原代码中有两处确定了当前后缀的答案：找到成功方案时，以及所有单词都尝试失败时。**你会分别在哪里写 `memo[start] = true` 和 `memo[start] = false`？**",
+      "codeBlockNames": [
+        "创建三态缓存",
+        "先处理终止条件再读取缓存"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "```java\nclass Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        Boolean[] memo = new Boolean[s.length()];\n        return dfs(s, wordDict, start, memo);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start, Boolean[] memo) {\n        for (String word : wordDict) {\n            // 如果已经完成了拆分\n            if (start == s.length()) {\n                return true;\n            }\n\n            // 这个后缀已经计算过，直接使用结果\n            if (memo[start] != null) {\n                return memo[start];\n            }\n\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length(), memo)) {\n                    memo[start] = true;\n                    return true;\n                }\n            }\n        }\n\n        memo[start] = false;\n        return false;\n    }\n}\n```\n\n这样吗",
+      "codeBlockNames": [
+        "我的第一版记忆化实现"
+      ],
+      "correctionMarkdown": "本题字典非空，两个判断放在循环内也能得到正确结果；后续移到循环外属于结构整理，不是修复本题正确性错误。"
+    },
+    {
+      "role": "assistant",
+      "contentMarkdown": "是的，**这版在本题约束下逻辑正确，缓存的两处赋值也都放对了：**\n\n- 找到成功方案：记录 `memo[start] = true`，立即返回。\n- 所有候选都失败：记录 `memo[start] = false`，再返回。\n\n还有一个结构上的建议：把下面两个判断**整体移到 `for` 循环之前**：\n\n```java\n// 如果已经完成了拆分\nif (start == s.length()) {\n    return true;\n}\n\n// 这个后缀已经计算过，直接使用结果\nif (memo[start] != null) {\n    return memo[start];\n}\n```\n\n你现在放在循环内，由于题目保证字典非空，也能正确执行。放到循环前更清楚：这两项检查针对当前递归状态，每次调用检查一次即可。\n\n最后我们把复杂度补上。设：\n\n- 字符串长度为 `n`，最多有 `n` 个需要计算的 `start`。\n- 字典有 `m` 个单词，每个状态最多遍历这 `m` 个单词。\n- 单词最大长度为 `L`，一次 `startsWith` 最多比较 `L` 个字符。\n- 加上缓存后，每个状态最多完整计算一次。\n\n**根据这几项，你觉得时间复杂度是多少？**",
+      "codeBlockNames": [
+        "递归入口的两项检查"
+      ]
+    },
+    {
+      "role": "user",
+      "contentMarkdown": "```java\nclass Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        Boolean[] memo = new Boolean[s.length()];\n        return dfs(s, wordDict, start, memo);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start, Boolean[] memo) {\n        // 如果已经完成了拆分\n        if (start == s.length()) {\n            return true;\n        }\n\n        // 这个后缀已经计算过，直接使用结果\n        if (memo[start] != null) {\n            return memo[start];\n        }\n\n        for (String word : wordDict) {\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length(), memo)) {\n                    memo[start] = true;\n                    return true;\n                }\n            }\n        }\n\n        memo[start] = false;\n        return false;\n    }\n}\n```\n\nO(n*m*L)",
+      "codeBlockNames": [
+        "我的最终记忆化代码"
+      ]
+    }
+  ],
+  "solutionVariants": [
+    {
+      "title": "纯递归（学习基线）",
+      "language": "java",
+      "code": "class Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        return dfs(s, wordDict, start);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start) {\n        for (String word : wordDict) {\n            // 如果已经完成了拆分\n            if (start == s.length()) {\n                return true;\n            }\n\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length())) {\n                    return true;\n                }\n            }\n        }\n        return false;\n    }\n}",
+      "timeComplexity": "O(m × L × 2^n) 是保守上界，最坏情况呈指数增长；n 为字符串长度、m 为字典大小、L 为最长单词长度。",
+      "spaceComplexity": "O(n)，递归栈。",
+      "isFinal": false,
+      "explanation": "这是我在理解递归返回值后完成的版本。逻辑正确，但相同后缀会反复计算，不适合作为满足最大规模的提交版本。",
+      "correctionMarkdown": "保留我的原注释和结束判断位置。字典非空使循环中的结束判断能正确执行；超时风险来自未缓存重复后缀，不是这项判断的位置。"
+    },
+    {
+      "title": "记忆化搜索",
+      "language": "java",
+      "code": "class Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        Boolean[] memo = new Boolean[s.length()];\n        return dfs(s, wordDict, start, memo);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start, Boolean[] memo) {\n        // 如果已经完成了拆分\n        if (start == s.length()) {\n            return true;\n        }\n\n        // 这个后缀已经计算过，直接使用结果\n        if (memo[start] != null) {\n            return memo[start];\n        }\n\n        for (String word : wordDict) {\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length(), memo)) {\n                    memo[start] = true;\n                    return true;\n                }\n            }\n        }\n\n        memo[start] = false;\n        return false;\n    }\n}",
+      "timeComplexity": "O(n × m × L)，n 个后缀状态，每个最多枚举 m 个单词，每次匹配最多比较 L 个字符。",
+      "spaceComplexity": "O(n)，包括缓存和最多 n + 1 层递归栈。",
+      "isFinal": true,
+      "explanation": "这是我在教练提示后亲手完成的最终版本。memo[start] 保存整个后缀的答案，null / true / false 区分未计算、可拆分、不可拆分。每次 wordBreak 新建缓存，所有递归共享同一数组。只规范排版，保留方法名、变量和全部注释。"
+    }
+  ],
+  "conversationDigest": {
+    "firstReaction": "从字典取出单词，比较 s 开头相同长度的前缀，匹配后继续处理剩余字符串。",
+    "stuckPoints": [
+      "最初把下一次递归的起点写成 word.length()，没有加当前起点 start。",
+      "不理解为什么单独调用 dfs(...) 不会把下一层的 true 自动返回给上一层。",
+      "学习记忆化时，一度把 memo 中的 true 与拆分进度、最后一个 true 联系起来，没有明确它表示整个后缀的答案。"
+    ],
+    "misconceptions": [
+      {
+        "before": "下一次递归从 word.length() 开始。",
+        "after": "word.length() 是本次前进的距离，下一次起点应为 start + word.length()。"
+      },
+      {
+        "before": "递归调用已经执行到了返回 true 的地方，但当前层只写 dfs(...)。",
+        "after": "每层方法独立返回；必须判断子调用结果并由当前层 return true，才能逐层向外传递成功。"
+      },
+      {
+        "before": "不同路径抵达同一 start 后答案相同，是因为 a 是 aa 的子集。",
+        "after": "答案相同的关键是相同 start 对应相同后缀，且字典可重复使用；后缀的可拆分性与此前路径无关。"
+      },
+      {
+        "before": "担心 memo 中最后一个 true 之后无法判断，把缓存与拆分进度混在一起。",
+        "after": "memo[i] 表示 s 从下标 i 开始的整个后缀能否拆分；null 表示未计算，true 表示可拆分，false 表示已计算且不可拆分。"
+      }
+    ],
+    "breakthroughs": [
+      "能够解释某个匹配分支失败后仍要尝试其他候选；只有所有候选都失败，才在循环后返回 false。",
+      "经过逐层返回的示例后，亲手加入对子调用返回值的判断，完成逻辑正确的纯 DFS。",
+      "能够准确解释 memo[3] = false 表示从下标 3 开始的整个后缀无法拆分。",
+      "在提示下亲手完成记忆化代码，正确缓存成功和失败结果，并把终止判断与缓存判断移到循环前。",
+      "能够给出记忆化版本的时间复杂度 O(n × m × L)。"
+    ],
+    "implementationNotes": [
+      "递归语义为 dfs(start)：s 从 start 开始的整个后缀能否由字典单词拼出；入口为 start = 0。",
+      "使用 s.startsWith(word, start) 判断当前位置是否匹配单词，方法名 startsWith 中有 s。",
+      "成功分支在递归返回 true 后写入 memo[start] = true 并立即 return true；全部候选失败后写入 memo[start] = false。",
+      "使用 Boolean[] memo = new Boolean[s.length()] 保存 null / true / false 三态，缓存命中条件为 memo[start] != null。",
+      "先判断 start == s.length()，再访问 memo[start]，因为 memo 没有下标 s.length()。",
+      "用户最初把终止和缓存判断放在 for 循环内；在 wordDict 非空的题目约束下仍正确，后续按建议提到循环前。",
+      "最终记忆化版本由用户在分步提示后亲手提交；不能记为教练直接补全，也不能记为无提示独立完成或已获线上 AC。"
+    ],
+    "edgeCases": [
+      "一个匹配单词留下的后缀不可拆分，不能立即判整个状态为 false，例如 cars 与 [car, ca, rs]。",
+      "到达 start == s.length() 时返回 true；长度为 n 的 memo 不能访问 memo[n]。",
+      "相同单词可以重复使用，不需要记录单词是否使用过；不同前缀路径到达相同 start 时可以复用同一后缀答案。",
+      "无法拆分的状态也必须缓存；重复前缀很多但结尾无法匹配的字符串会暴露纯 DFS 的重复计算。",
+      "字典单词均非空，每次成功匹配后 start 严格增大，递归会终止。"
+    ],
+    "interviewExpression": "我定义 dfs(start) 表示从 start 开始的整个后缀能否拆分。遍历字典，若某个单词匹配当前位置，并且它后面的后缀也能拆分，就返回 true；所有候选都失败才返回 false。不同路径可能到达同一个 start，而剩余后缀与字典相同，所以用 Boolean 数组缓存答案，null、true、false 分别表示未计算、可拆分、不可拆分。先处理到达字符串末尾的情况，再查询缓存。设字符串长度为 n、字典大小为 m、最长单词长度为 L，时间复杂度为 O(n × m × L)，额外空间为 O(n)。",
+    "reviewAdvice": [
+      "2 天后遮住答案重写记忆化 DFS，重点检查递归成功结果是否逐层返回、false 是否在循环结束后缓存。",
+      "手画 leetcode 的 0 → 4 → 8 调用与返回过程，说明单独调用 dfs 和 return dfs 的区别。",
+      "用两条不同路径抵达相同 start 的例子解释缓存依据，并说明为什么 Boolean 的 null 与 false 不能混为一谈。",
+      "用单字符成功、单字符失败、先失败后成功以及重复前缀加无法匹配结尾四类用例检查边界。",
+      "7 天后口述状态定义、三态缓存、终止判断顺序，以及 O(n × m × L) 时间和 O(n) 空间的来源。"
+    ],
+    "conceptUpdates": [
+      {
+        "concept": "DFS",
+        "note": "本题枚举的是单词拆分路径；dfs(start) 返回整个后缀是否可拆分，任一成功分支要向上逐层返回 true，全部分支失败才返回 false。"
+      },
+      {
+        "concept": "动态规划",
+        "note": "相同 start 对应相同后缀，字典可重复使用使状态不依赖此前选择；缓存成功和失败状态后，每个非终止状态只展开一次。"
+      },
+      {
+        "concept": "动态规划",
+        "note": "Boolean[] 的 null 表示未求解，true 和 false 都是可复用的已求解答案；不能用 boolean[] 的默认 false 同时表达未计算与不可拆分。"
+      },
+      {
+        "concept": "字符串String的常用函数",
+        "note": "startsWith(word, start) 从指定偏移比较前缀；单次匹配最坏需要 O(L) 字符比较，计入总时间 O(n × m × L)。"
+      }
+    ]
+  },
+  "readiness": {
+    "status": [
+      "提示后完成",
+      "需要二刷"
+    ],
+    "skills": [
+      "字符串前缀匹配",
+      "DFS 路径枚举",
+      "递归返回值逐层传递",
+      "后缀状态定义",
+      "Boolean 三态记忆化",
+      "O(n × m × L) 复杂度分析"
+    ],
+    "weakPoints": [
+      "布尔递归成功结果的逐层传递需脱离提示巩固",
+      "以整个后缀为状态的缓存语义需二刷巩固",
+      "null 与 false 的区别及终止判断先于缓存访问"
+    ],
+    "interviewExpression": "基本可用",
+    "nextReview": [
+      "2 天后独立重写记忆化 DFS，并手推成功与失败返回",
+      "7 天后口述后缀状态、三态缓存、边界顺序和复杂度"
+    ]
+  },
+  "trainingMarkdown": "我最初想到从字典中取出单词，与 s 开头相同长度的部分比较，匹配后继续拆分剩余字符串。我能说明：某个匹配前缀的方案失败，不代表其他方案也失败；只有所有候选都失败，才能返回 false。\n\n在把思路写成递归时，我最初将下一次起点回答为 word.length()。教练提醒我区分“本次前进的距离”和“新的绝对下标”，我据此改为 start + word.length()。\n\n我的第一次代码写错了 startsWith 的方法名，并且只调用 dfs(...)，没有处理它的返回值。我对后者明确表示不理解。教练用 leetcode 的 0 → 4 → 8 调用过程说明：每一层递归是独立的方法调用，下一层的 true 必须由当前层判断并再次返回。我随后亲手写出 if (dfs(...)) { return true; }，完成了逻辑正确的纯 DFS。\n\n继续优化时，我起初用“a 是 aa 的子集”解释两条路径抵达相同 start 后答案相同。教练纠正了依据：相同 start 面对的是相同后缀，字典中的单词又可以重复使用，因此后缀答案不依赖之前怎么拆。我也曾担心“最后一个 true 之后”无法判断；通过后缀语义与 null / true / false 的说明，我能正确解释 memo[3] = false 表示从下标 3 开始的整个后缀无法拆分。\n\n我在分步提示后亲手完成了记忆化实现，保存成功与失败结果，并把终止判断、缓存判断移到循环前。我最后能够给出 O(n × m × L) 的时间复杂度。这里 n 是字符串长度，m 是字典大小，L 是最长单词长度。\n\n**教练评估：提示后完成，需要二刷。** 我已经能解释后缀状态与主要复杂度；下一步要在不看提示时重写，巩固递归返回值传播、三态缓存，以及先处理字符串末尾再访问 memo 的边界顺序。\n",
+  "reviewMarkdown": "**面试表达**\n\n我定义 dfs(start) 表示从 start 开始的整个后缀能否拆分。遍历字典，若当前单词匹配，并且后续后缀可拆分，就返回 true；所有候选失败才返回 false。不同路径可能到达相同 start，而剩余后缀和字典相同，所以可以按 start 缓存答案。Boolean 数组用 null 表示未计算，用 true / false 表示后缀能否拆分。先判断到达字符串末尾，再访问缓存。每个 start 只展开一次，每次最多检查 m 个单词、每个单词最多比较 L 个字符，因此时间是 O(n × m × L)，缓存与递归栈的额外空间是 O(n)。\n\n**教练评估**\n\n提示后完成，需要二刷。本次已观察到学习者在提示后亲手实现记忆化，能正确解释后缀状态并给出时间复杂度；尚未观察完整脱稿口述，需通过独立重写巩固返回值传播、三态缓存和边界顺序。\n\n**复习动作**\n\n- 2 天后遮住答案重写。检查成功结果是否逐层返回，失败是否在所有候选尝试完后缓存，终止判断是否先于 memo[start]。\n- 手推 leetcode 的 0 → 4 → 8 调用与返回；再用 cars 和 [car, ca, rs] 验证一个候选失败后还会继续尝试。\n- 用重复前缀但结尾无法匹配的字符串，解释为什么需要缓存 false，以及为什么相同 start 可以复用答案。\n- 7 天后用 1 分钟口述状态定义、null / true / false 的区别，以及时间 O(n × m × L)、额外空间 O(n) 的来源。\n",
+  "complexityMarkdown": "令 n = s.length()，m = wordDict.size()，L 为最长单词的长度。\n\n- **纯递归**：最坏情况指数增长。不同切分路径可以反复到达同一个 start；例如连续 a 后接 b、字典包含 a 和 aa 时，失败后缀会被重复搜索。因为字典单词互不相同，每一串切分位置至多对应一条路径，递归调用总数可用 O(2^n) 保守界定；每个非终止调用最多遍历 m 个单词并比较至多 L 个字符，故 O(m × L × 2^n) 是保守上界。递归栈 O(n)。\n- **记忆化搜索**：需要完整计算的 start 只有 0 到 n - 1，每个至多计算一次。每个状态枚举 m 个单词，startsWith 至多比较 L 个字符，总时间 O(n × m × L)。缓存 O(n)，递归栈 O(n)，额外空间合计 O(n)。\n- **下标到达 n**：先返回 true，再访问 memo；Boolean[n] 的有效下标只有 0 到 n - 1。\n- **失败也要缓存**：false 表示整个后缀已经确认无法拆分；只有全部候选失败后才能写入。null 不能当成失败，否则尚未计算的状态会被提前剪掉。\n- **不受此前路径影响**：字典单词允许重复使用，start 相同就意味着后缀和可用选项相同，不需要记录已使用单词。\n- **无法完整匹配就不前进**：startsWith(word, start) 在剩余长度不足或内容不同时返回 false。单词均非空，因此每次递归 start 严格增加，最大深度为 n + 1。",
+  "tags": {
+    "dataStructures": [
+      "字符串"
+    ],
+    "methods": [
+      "DFS",
+      "动态规划"
+    ],
+    "patterns": [],
+    "commonFunctions": [
+      "字符串String的常用函数"
+    ],
+    "readiness": [
+      "提示后完成",
+      "需要二刷"
+    ]
+  },
+  "tagEvidence": {
+    "字符串": "输入是字符串，逐个匹配字典前缀并转向剩余后缀。",
+    "DFS": "dfs 递归尝试每个匹配单词，找到一个完整方案即返回。",
+    "动态规划": "Boolean[] memo 缓存由 start 唯一确定的子问题结果，是自顶向下的动态规划。",
+    "字符串String的常用函数": "训练中直接使用并修正 String.startsWith(word, start)。",
+    "提示后完成": "在教练提示后完成返回值传播、三态缓存和记忆化复杂度分析。",
+    "需要二刷": "需要脱离提示复现整个后缀语义、返回值传播与缓存边界。"
+  },
+  "functionUsages": [
+    {
+      "id": "string-starts-with-offset",
+      "functionName": "String.startsWith",
+      "commonFunction": "字符串String的常用函数",
+      "notePath": "src/notes/03.常用函数/02.字符串String/String.startsWith.md",
+      "signature": "boolean String.startsWith(String prefix, int toffset)",
+      "summary": "`s.startsWith(word, start)` 判断字符串 `s` 从下标 `start` 开始的部分是否以 `word` 开头，适合用下标表示剩余字符串的递归或记忆化搜索，无需显式调用 `substring`。",
+      "whenToUse": [
+        "需要判断某个候选单词能否接在当前字符串位置上",
+        "递归状态用起点下标表示后缀，希望直接判断前缀匹配",
+        "匹配成功后需要按候选单词长度推进下标"
+      ],
+      "exampleTitle": "单词拆分：从 start 匹配候选单词并传回成功结果",
+      "exampleCode": "for (String word : wordDict) {\n    if (s.startsWith(word, start)) {\n        if (dfs(s, wordDict, start + word.length(), memo)) {\n            memo[start] = true;\n            return true;\n        }\n    }\n}\nmemo[start] = false;\nreturn false;",
+      "pitfalls": [
+        "方法名是 `startsWith`，不是 `startWith`，中间的 s 不能遗漏",
+        "第二个参数是当前字符串中的起点下标，不是待匹配单词的长度",
+        "匹配成功后的下一起点是 `start + word.length()`，不能只写 `word.length()`",
+        "`startsWith` 只说明这一个候选前缀匹配，不保证后面的字符串也能拆分；还要判断递归结果",
+        "`toffset` 为负数或大于字符串长度时返回 false；剩余字符不足以容纳 prefix 时也无法匹配",
+        "前缀比较可能检查多个字符，单次调用应按 O(word.length()) 计入复杂度分析"
+      ],
+      "sources": [
+        {
+          "label": "Oracle Java 17 String.startsWith(String, int)",
+          "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html#startsWith(java.lang.String,int)",
+          "note": "官方文档定义 `startsWith(String prefix, int toffset)`：检查从指定下标开始的子串是否以 prefix 开头；toffset 为负数或大于字符串长度时返回 false，其余情况的结果等同于 `this.substring(toffset).startsWith(prefix)`。本次已读取并核对该 API 小节。"
+        }
+      ],
+      "problemTitle": "M139-单词拆分",
+      "problemNotePath": "src/notes/01.按数据结构分类/08.字符串/M139_单词拆分.md"
+    }
+  ],
+  "sourceMetadata": {
+    "source": "当前 M139 训练对话原文，保留所有可恢复教学问答和代码；仅解码 HTML 实体并规范 Java 空白。",
+    "userReportedOnlineAcceptance": false
+  },
+  "thinkingMarkdown": "用 dfs(start) 判断整个后缀是否可拆分，枚举匹配前缀并逐层传回成功结果；使用 Boolean[] 缓存各起点的成功或失败，消除重复子问题。"
+}
