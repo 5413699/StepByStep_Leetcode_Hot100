@@ -24,7 +24,7 @@ class LearningWorkflowTests(unittest.TestCase):
             "problemTitle": "E070. 爬楼梯", "thinking": "先计算，再更新。",
             "statementMarkdown": "原题。", "solutionJava": "public int climbStairs(int n) { return n; }",
             "teachingTranscript": [{"role": "user", "contentMarkdown": "```java\n// 我的原注释\nint lastTwo = 1;\n```"}],
-            "solutionVariants": [{"title": "原版本", "code": "// 保留注释\nint lastTwo = 1;", "language": "java", "isFinal": True}],
+            "solutionVariants": [{"title": "原版本", "code": "// 保留注释\npublic int climbStairs(int n) { return n; }", "language": "java", "isFinal": True}],
             "conversationDigest": {"firstReaction": "真实摘要"},
             "sourceMetadata": {"source": "原始对话"},
         }
@@ -55,7 +55,7 @@ class LearningWorkflowTests(unittest.TestCase):
             original = source.read_bytes()
             (folder / "metadata.json").write_text(json.dumps({"problemTitle":record["problemTitle"], "thinking":record["thinking"]}, ensure_ascii=False), encoding="utf-8")
             (folder / "config.json").write_text(json.dumps({"siyuan":{"enabled":True}, "yuque":{"enabled":True}}), encoding="utf-8")
-            (folder / "Problem.java").write_text("class Problem {}", encoding="utf-8")
+            (folder / "Problem.java").write_text("class Problem {\n// region LeetCode solution\n" + record["solutionJava"] + "\n// endregion\n}", encoding="utf-8")
             (folder / "note.md").write_text("old note", encoding="utf-8")
             # Only external/mutating boundaries are stubbed; real orchestration,
             # rendering, metadata copying and result aggregation run unchanged.
@@ -69,16 +69,19 @@ name = Path(__file__).stem
 result = {'provider':name,'input':str(Path(sys.argv[sys.argv.index('--input')+1])),'record':data}
 Path(name + ('-dry' if dry else '-write') + '.json').write_text(json.dumps(result, ensure_ascii=False), encoding='utf-8')
 if name.endswith('yuque') and not dry:
-    print(json.dumps({'writeStatus':'written','directoryStatus':'verified','verificationStatus':'failed','success':False}))
+    print(json.dumps({'writeStatus':'written','directoryStatus':'verified','verificationStatus':'failed','success':False,'url':'https://www.yuque.com/test/book/leetcode-70'}))
     sys.exit(2)
-print(json.dumps({'success':True}))
+if dry:
+    print(json.dumps({'enabled':True,'dryRun':True,'success':True,'problem':'test/problem'}))
+else:
+    print(json.dumps({'enabled':True,'validation':'passed','problem':{'id':'test-id','hPath':'test/problem'}}))
 '''
             for name in ["sync_leetcode_to_siyuan.py", "sync_leetcode_to_yuque.py"]:
                 (scripts / name).write_text(provider, encoding="utf-8")
             wrapper = folder / "run.ps1"
-            wrapper.write_text("function python { & " + ps_literal(sys.executable) + " @args }\nfunction git { if ($args[0] -eq 'branch') { 'codex/test' } else { 'abc1234' } }\n$result = & " + ps_literal(scripts / "finish_leetcode_workflow.ps1") + " -JavaPath Problem.java -NotePath note.md -WorkflowMetadataJson metadata.json -SyncInputJson source.json -WorkflowConfigPath config.json -ReplaceWholeNote -AllowUnrelatedChanges -NoPush\n[System.IO.File]::WriteAllText((Join-Path $PWD 'result.json'), ($result -join \"`n\"), [System.Text.UTF8Encoding]::new($false))\n", encoding="utf-8-sig")
+            wrapper.write_text("$ErrorActionPreference = 'Stop'\nfunction python { & " + ps_literal(sys.executable) + " @args }\nfunction git { if ($args[0] -eq 'branch') { 'codex/test' } else { 'abc1234' } }\n& " + ps_literal(scripts / "finish_leetcode_workflow.ps1") + " -JavaPath Problem.java -NotePath note.md -WorkflowMetadataJson metadata.json -SyncInputJson source.json -WorkflowConfigPath config.json -StatusJson result.json -ReplaceWholeNote -AllowUnrelatedChanges -NoPush\n", encoding="utf-8-sig")
             result = subprocess.run([shutil.which("pwsh") or shutil.which("powershell"), "-NoProfile", "-File", str(wrapper)], cwd=folder, capture_output=True, timeout=30)
-            self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", errors="replace"))
+            self.assertNotEqual(result.returncode, 0, "Partial publication must not return success")
             self.assertEqual(source.read_bytes(), original)
             self.assertEqual((folder / "note.md").read_text(encoding="utf-8"), render_markdown(record))
             self.assertEqual((folder / "at-commit.md").read_bytes(), (folder / "note.md").read_bytes())
@@ -90,6 +93,10 @@ print(json.dumps({'success':True}))
             self.assertEqual(final["yuqueSync"]["writeStatus"], "written")
             self.assertEqual(final["yuqueSync"]["verificationStatus"], "failed")
             self.assertTrue(final["failures"])
+            self.assertFalse(final["complete"])
+            self.assertEqual(final["providers"]["siyuan"]["stages"]["readback"]["status"], "passed")
+            self.assertEqual(final["providers"]["yuque"]["stages"]["write"]["status"], "passed")
+            self.assertEqual(final["providers"]["yuque"]["stages"]["browser"]["status"], "pending")
 
 
 if __name__ == "__main__":

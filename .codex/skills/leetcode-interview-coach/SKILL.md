@@ -29,7 +29,7 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 - **Finish a completed solution**: read `references/finish-flow.md`.
   - Also read `references/note-template.md` before composing a note; it governs full teaching records, answer variants, and comment-preserving layout.
   - Triggers: "最终答案", "帮我整理", "帮我提交", "收尾", "这版通过了", "一次运行成功".
-  - Output: integrated Java answer, updated project note, readiness assessment, Maven compile, Git commit, push, optional SiYuan sync.
+  - Output: integrated Java answer, full learning record, readiness assessment, verification, Git commit/push, and every configured publishing target. Finish is not synonymous with Git completion.
 
 - **Extract current-problem learning digest**: read `references/conversation-digest-schema.md`.
   - Use inside finish flow before repository completion or SiYuan sync.
@@ -102,6 +102,8 @@ This is the only LeetCode interview-training entrypoint for this repository. The
 
 When the user reaches a final answer:
 
+Use `finish_leetcode_workflow.ps1` for a full closeout, with a persistent `-StatusJson`. A direct `finish_problem.ps1` run completes only the Git subtask. Read the effective publishing configuration and the user's standing preferences before doing work: enabled targets are required, not optional omissions. Missing configuration must be resolved or reported as incomplete, never interpreted as permission to skip publishing. Follow the completion checks and read-only recovery path in `references/finish-flow.md`.
+
 1. Locate the current problem's Java scaffold and note.
 2. Replace only the marked LeetCode solution region.
 3. Update only the intended repository note region.
@@ -117,6 +119,8 @@ When the user reaches a final answer:
 ## User-Facing Closeout
 
 After finishing work, report:
+
+Only report “收尾完成” when `check_closeout.py` reports `status=complete` and `complete=true` and you have inspected its evidence. If incomplete, state what actually succeeded and name the remaining step; API write success does not prove browser layout verification. Preserve the report and authored learning record so continuation can finish the missing step without republishing or creating duplicates.
 
 - branch name
 - commit hash

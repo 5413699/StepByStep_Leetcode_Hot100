@@ -39,6 +39,8 @@ Read `note-template.md` for presentation. These fields are optional for backward
 
 新收尾应明确提供 `trainingMarkdown`，统一学习者视角；教练评估须明确标识。历史问答中的“我／你”保持原话，不做全局代词替换。`conversationDigest` 仍可用简短、客观的教练摘要服务索引，不直接冒充学习者原话。
 
+当一部分历史只有摘要或已无法恢复时，另用 `sourceMetadata.missingTeachingHistory`（非空字符串或字符串列表）描述缺失范围，并在可见教学记录中注明来源限制。这是缺失声明，不是完整性通过的替代证据；仍须保留全部可恢复原文。新收尾由工作流预检，旧 payload 的独立渲染与发布仍兼容。
+
 旧 payload 没有新增字段时继续支持 `noteContent` 或已有 `processMarkdown`；没有原文时展示「完整教学记录未提供」，摘要不得伪装成逐轮对话。
 
 ## Required Behavior

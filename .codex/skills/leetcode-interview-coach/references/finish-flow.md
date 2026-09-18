@@ -22,6 +22,7 @@ Before composing content, read `note-template.md`. Generate one learning record 
 
 ## Workflow
 
+0. Resolve publishing scope before editing: inspect the local configuration and the user's existing authorization. Explicitly record which providers are enabled/disabled and why. An absent configuration is not an all-disabled configuration; repair it from confirmed destination preferences when possible, otherwise record the unresolved target. Do not ask again for already authorized GitHub or YuQue publication.
 1. Confirm the latest solution in the conversation is the final answer.
 2. Read the target Java file before editing.
    - On Windows PowerShell 5.1, plain `Get-Content` may decode UTF-8 files without BOM as the local ANSI code page and display Chinese as mojibake. Use `Get-Content -Encoding UTF8` for display, or .NET strict UTF-8 reads for integrity checks.
@@ -64,6 +65,28 @@ Codex 于 <yyyy-MM-dd HH:mm zzz> 提交
     - Concept pages may also receive compact `教练摘要` entries derived from the conversation digest. These entries are for future coach-memory retrieval and must stay short, deduped, and problem-linked.
     - Before dry-run, verify the generated sync payload has non-empty `solutionJava`; an empty `solutionJava` must fail instead of creating an empty `最终题解` section.
 14. Validate SiYuan current-block kramdown using `siyuan-sync-validation.md`; never use exported full Markdown for write-back or required-text validation. For YuQue follow `yuque-api-flow.md`: save the pre-write body/format/TOC, use exact slug or pinned numeric document ID, then independently verify saved rich body, title, slug and directory. Native collapses require an actual browser expand/collapse check; a non-empty write response alone is not verification.
+
+## Completion Evidence and Continuation
+
+Use `finish_leetcode_workflow.ps1 -StatusJson <run-report.json>` for a full closeout. Pass `-AdditionalPaths` for explicitly relevant skill changes or the authored learning-record file; unrelated edits remain excluded. The report tracks source checks, rendering, common functions, compile/Git, provider dry-run, write, directory and body verification separately. `check_closeout.py` derives the overall status instead of trusting a free-text success message. A configured provider failure or an unverified required stage produces an incomplete result and a nonzero exit. User-authorized skips remain visible, with their reason, and are not a full closeout.
+
+For new closeouts, persist the shared learning record, not just an ephemeral digest. Review these content properties before running the workflow:
+
+- All recoverable question/answer/code turns are ordered and retain the learner's comments and identifiers. Do not replace a transcript with a summary.
+- If original history is missing, describe the gap in `sourceMetadata.missingTeachingHistory` and in visible note prose; do not reconstruct alleged quotes from a compaction summary.
+- Preserve historical errors with adjacent corrections. A coach mistake is not a learner bug. Distinguish observed understanding from a suggested interview script, and a hinted solution from independent derivation.
+- The final variant and `solutionJava` agree, compile and preserve user comments. Test meaningful sample/boundary behavior in proportion to the problem; record actual results rather than equating compilation with correctness.
+- Inspect the generated Markdown and Lake preview. Ensure full statement, named code blocks, collapses, readable final answer, and no duplicated digest or internal fields.
+
+After YuQue API verification, perform the actual browser interactions from `yuque-api-flow.md`. Save observations/screenshots locally and author a small UTF-8 evidence JSON bound to this report's `workflowId`, `payloadSha256` and provider URL. Its `checks` are `nativeCollapse`, `codeBlockNames`, `codeHighlight`, `quotesLinksBold`, and `finalAnswerVisible`; set each to true only after observing it. Include `provider: "yuque"`, `checkedAt`, a concrete `observation`, and existing `evidencePaths`.
+
+```text
+python scripts/check_closeout.py --report <run-report.json> --browser-evidence <browser-evidence.json>
+```
+
+Run that command from the skill directory, or use the full script path from the repository root. Its read-only completion check must succeed before announcing full completion. Scripts cannot prove that a human-facing page was exercised; an invented evidence file is not validation.
+
+If only browser verification remains, do that check and update the report; do not rerun the whole writer. If the body/directory read-back failed after a confirmed write, keep the document ID, source payload and backup, then read the exact target to determine what remains. Record successful read-only recovery with `check_closeout.py --report <run-report.json> --verification-evidence <recovery.json>`: use the same target/hash/time/path binding fields, `readOnly: true`, and `verifiedStages` listing only the actually confirmed `write`, `directory`, or `readback` stages. The checker retains the previous states in `recoveryHistory`; diagnostic failures remain historical rather than forcing another write. Never create again because a read failed. If Git was already completed, use the provider's independent path and retain evidence for the remaining stages; do not fabricate a second commit just to satisfy the orchestrator. Report the actual completed and outstanding stages.
 
 ## Script Interfaces
 
