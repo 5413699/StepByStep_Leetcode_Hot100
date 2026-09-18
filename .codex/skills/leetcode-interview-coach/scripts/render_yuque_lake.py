@@ -269,6 +269,9 @@ class LakeRenderer:
             if item:
                 indent = len(item.group(1))
                 ordered = item.group(2)[0].isdigit()
+                # A paragraph or code card may split one authored sequence
+                # into several ol elements. Each segment must keep its marker.
+                list_attrs = {"start": str(int(item.group(2)[:-1]))} if ordered else {}
                 items: list[str] = []
                 while index < len(lines):
                     match = _LIST.match(lines[index])
@@ -288,7 +291,7 @@ class LakeRenderer:
                         else:
                             break
                     items.append(self.element("li", self.markdown("\n".join(content), code_title=code_title, context=nearby_context or heading_context, speaker=speaker, code_names=code_names)))
-                parts.append(self.element("ol" if ordered else "ul", "".join(items)))
+                parts.append(self.element("ol" if ordered else "ul", "".join(items), **list_attrs))
                 continue
             if index + 1 < len(lines) and "|" in line and self._table_separator(lines[index + 1]):
                 rows = [self._table_row(line)]
@@ -438,7 +441,7 @@ def inspect_lake(source: str) -> dict[str, Any]:
     """Semantic fingerprint; IDs/style rewrites do not invalidate read-back."""
     parsed = _LakeParser(source)
     nodes = list(_walk(parsed.root))
-    result: dict[str, Any] = {"text": _canonical(_node_text(parsed.root)), "flow": _content_flow(parsed.root), "codes": [], "codeNames": [], "collapses": [], "headings": [], "links": [], "quotes": 0, "bold": []}
+    result: dict[str, Any] = {"text": _canonical(_node_text(parsed.root)), "flow": _content_flow(parsed.root), "codes": [], "codeNames": [], "collapses": [], "headings": [], "links": [], "quotes": 0, "bold": [], "orderedLists": []}
     for node in nodes:
         if node.tag == "card":
             try:
@@ -457,6 +460,10 @@ def inspect_lake(source: str) -> dict[str, Any]:
             result["collapses"].append((_canonical(_node_text(summary)) if summary else "", node.attrs.get("open") == "false", native))
         elif node.tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
             result["headings"].append((node.tag, _canonical(_node_text(node))))
+        elif node.tag == "ol":
+            start = node.attrs.get("start", "1").strip()
+            normalized_start = int(start) if re.fullmatch(r"[+-]?\d+", start) else start
+            result["orderedLists"].append((normalized_start, _canonical(_node_text(node))))
         elif node.tag == "a":
             result["links"].append((unescape(node.attrs.get("href", "")), _canonical(_node_text(node))))
         elif node.tag == "blockquote":
@@ -481,6 +488,7 @@ def verify_lake(expected_body: str, actual_doc: dict[str, Any]) -> list[str]:
         (expected["codeNames"] == actual["codeNames"], "回读代码块名称缺失或不一致。"),
         (expected["collapses"] == actual["collapses"], "回读原生折叠的标题、数量或默认收起状态不一致。"),
         (expected["headings"] == actual["headings"], "回读标题层级或顺序不一致。"),
+        (expected["orderedLists"] == actual["orderedLists"], "回读有序列表的起始编号或内容不一致。"),
         (expected["links"] == actual["links"], "回读链接地址或文字不一致。"),
         (actual["quotes"] >= expected["quotes"], "回读引用样式缺失。"),
         (expected["bold"] == actual["bold"], "回读加粗内容不一致。"),

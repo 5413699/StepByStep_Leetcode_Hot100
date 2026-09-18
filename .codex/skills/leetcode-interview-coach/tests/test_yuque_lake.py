@@ -170,6 +170,23 @@ class LakeTests(unittest.TestCase):
         self.assertIn("<table ", body)
         self.assertIn("第一条保留补充。子条目第二条n答案11", inspect_lake(body)["text"])
 
+    def test_ordered_list_segments_keep_numbers_across_prose_code_and_quotes(self):
+        source = "1. 定义状态\n\n补充说明。\n\n2. 选择最后一步\n\n```java\ndp[i - j * j] + 1\n```\n\n3. 取最小值"
+        for quoted in [False, True]:
+            with self.subTest(quoted=quoted):
+                authored = "\n".join("> " + line if line else ">" for line in source.splitlines()) if quoted else source
+                parsed = inspect_lake(LakeRenderer().markdown(authored))
+                self.assertEqual(parsed["orderedLists"], [(1, "定义状态"), (2, "选择最后一步"), (3, "取最小值")])
+                self.assertEqual(parsed["codes"], [("java", "dp[i - j * j] + 1")])
+                self.assertEqual(parsed["flow"], [("text", "定义状态补充说明。选择最后一步"), ("code", "java", "dp[i - j * j] + 1"), ("text", "取最小值")])
+
+    def test_readback_checks_list_numbers_but_accepts_default_start_one(self):
+        expected = LakeRenderer().markdown("1. 第一问\n\n2. 第二问\n\n3. 第三问")
+        self.assertEqual(verify_lake(expected, {"body_lake": expected.replace(' start="1"', "")}), [])
+        changed = expected.replace(' start="2"', "")
+        self.assertEqual(inspect_lake(expected)["text"], inspect_lake(changed)["text"])
+        self.assertTrue(any("起始编号" in error for error in verify_lake(expected, {"body_lake": changed})))
+
     def test_empty_and_legacy_payload(self):
         self.assertTrue(render_lake({}).startswith("<!doctype lake>"))
         body = render_lake({"problemTitle": "E070. 爬楼梯", "noteContent": "# E70-爬楼梯\n\n## 最终题解\n\n```java\n" + CODE + "\n```", "conversationDigest": {"firstReaction": "不应重复"}})
