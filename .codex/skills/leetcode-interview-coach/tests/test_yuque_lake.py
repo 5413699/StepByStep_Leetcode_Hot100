@@ -140,6 +140,33 @@ class LakeTests(unittest.TestCase):
             if node.tag == "blockquote":
                 self.assertFalse(any(child.tag == "card" for child in _walk(node)))
 
+    def test_coach_definition_and_memo_table_stay_between_explanations(self):
+        payload = {
+            "teachingTranscript": [{
+                "role": "assistant",
+                "contentMarkdown": "先定义状态。\n\n> `dfs(start)`：剩余字符串能否拆分。\n\n再解释缓存。\n\n| 值 | 含义 |\n| --- | --- |\n| null | 尚未计算 |\n| false | 无法拆分 |\n| true | 可以拆分 |\n\n最后处理边界。",
+            }],
+        }
+        body = render_lake(payload)
+        nodes = list(_walk(_LakeParser(body).root))
+        teaching = next(node for node in nodes if node.tag == "details" and any(child.tag == "blockquote" for child in _walk(node)))
+        self.assertEqual([node.tag for node in teaching.children], ["summary", "p", "blockquote", "blockquote", "blockquote", "table", "blockquote"])
+        self.assertTrue(inspect_lake(body)["text"].endswith("先定义状态。dfs(start)：剩余字符串能否拆分。再解释缓存。值含义null尚未计算false无法拆分true可以拆分最后处理边界。"))
+        self.assertIn("<code ", body)
+        for node in nodes:
+            if node.tag == "blockquote":
+                self.assertFalse(any(child.tag in {"blockquote", "table", "card"} for child in list(_walk(node))[1:]))
+
+    def test_quoted_list_preserves_nested_definition_table_and_code_order(self):
+        body = LakeRenderer().markdown("> - 先解释\n>\n>   > 状态定义\n>\n>   再解释\n>\n>   | 值 | 含义 |\n>   | --- | --- |\n>   | null | 未计算 |\n>\n>   ```java\n>   return memo[start];\n>   ```\n>\n>   再提问")
+        parsed = inspect_lake(body)
+        self.assertEqual(parsed["flow"], [("text", "先解释状态定义再解释值含义null未计算"), ("code", "java", "return memo[start];"), ("text", "再提问")])
+        self.assertIn("<ul ", body)
+        self.assertEqual(body.count("<table "), 1)
+        for node in _walk(_LakeParser(body).root):
+            if node.tag == "blockquote":
+                self.assertFalse(any(child.tag in {"blockquote", "table", "card"} for child in list(_walk(node))[1:]))
+
     def test_readback_detects_cards_moved_after_all_prose(self):
         expected = LakeRenderer().markdown("> 先讲解\n>\n> ```java\n> int answer = 1;\n> ```\n>\n> 再提问")
         card = re.search(r"<card\b.*?</card>", expected).group()

@@ -181,17 +181,23 @@ class LakeRenderer:
         return bool(_FENCE.match(line) or _HEADING.match(line) or _LIST.match(line)
                     or re.match(r"^ {0,3}>", line) or re.fullmatch(r"\s*(?:---+|\*\*\*+|___+)\s*", line))
 
-    def quote_around_cards(self, content: str) -> str:
-        """Lake viewers eject cards from quotes; quote only the prose runs.
+    def quote_around_blocks(self, content: str) -> str:
+        """Keep cards, tables and authored quotes between the prose runs.
 
-        Keep the card at its original position, including inside a list. A
-        container holding a card stays outside the quote and its prose children
-        are quoted separately, so no code card has a blockquote ancestor.
+        Lake viewers move cards and nested quotes out of a surrounding quote.
+        Keep these blocks and tables at their authored positions, including
+        inside lists. Containers holding them stay outside the new quote;
+        quote only their prose children so the blocks never gain a quote ancestor.
         """
-        def has_card(node: Any) -> bool:
+        def standalone(node: Any) -> bool:
+            return isinstance(node, _Node) and (
+                node.tag in {"blockquote", "table"}
+                or node.tag == "card" and node.attrs.get("name") == "codeblock"
+            )
+
+        def has_standalone_block(node: Any) -> bool:
             return isinstance(node, _Node) and any(
-                child.tag == "card" and child.attrs.get("name") == "codeblock"
-                for child in _walk(node)
+                standalone(child) for child in _walk(node)
             )
 
         def quote_children(children: list[Any]) -> str:
@@ -204,11 +210,11 @@ class LakeRenderer:
                     prose.clear()
 
             for child in children:
-                if not has_card(child):
+                if not has_standalone_block(child):
                     prose.append(_node_html(child))
                     continue
                 flush()
-                if child.tag == "card":
+                if standalone(child):
                     parts.append(_node_html(child))
                 else:
                     parts.append(_node_html(child, body=quote_children(child.children)))
@@ -263,7 +269,7 @@ class LakeRenderer:
                     quoted.append(re.sub(r"^ {0,3}> ?", "", lines[index], count=1))
                     index += 1
                 quoted_content = self.markdown("\n".join(quoted), code_title=code_title, context=nearby_context or heading_context, speaker=speaker, code_names=code_names)
-                parts.append(self.quote_around_cards(quoted_content))
+                parts.append(self.quote_around_blocks(quoted_content))
                 continue
             item = _LIST.match(line)
             if item:

@@ -158,7 +158,7 @@
     },
     {
       "role": "user",
-      "contentMarkdown": "```java\nclass Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        Boolean[] memo = new Boolean[s.length()];\n        return dfs(s, wordDict, start, memo);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start, Boolean[] memo) {\n        // 如果已经完成了拆分\n        if (start == s.length()) {\n            return true;\n        }\n\n        // 这个后缀已经计算过，直接使用结果\n        if (memo[start] != null) {\n            return memo[start];\n        }\n\n        for (String word : wordDict) {\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length(), memo)) {\n                    memo[start] = true;\n                    return true;\n                }\n            }\n        }\n\n        memo[start] = false;\n        return false;\n    }\n}\n```\n\nO(n*m*L)",
+      "contentMarkdown": "```java\nclass Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        Boolean[] memo = new Boolean[s.length()];\n        return dfs(s, wordDict, start, memo);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start, Boolean[] memo) {\n        // 如果已经完成了拆分\n        if (start == s.length()) {\n            return true;\n        }\n\n        // 这个后缀已经计算过，直接使用结果\n        if (memo[start] != null) {\n            return memo[start];\n        }\n\n        for (String word : wordDict) {\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length(), memo)) {\n                    memo[start] = true;\n                    return true;\n                }\n            }\n        }\n\n        memo[start] = false;\n        return false;\n    }\n}\n```\n\n`O(n*m*L)`",
       "codeBlockNames": [
         "我的最终记忆化代码"
       ]
@@ -169,8 +169,8 @@
       "title": "纯递归（学习基线）",
       "language": "java",
       "code": "class Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        return dfs(s, wordDict, start);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start) {\n        for (String word : wordDict) {\n            // 如果已经完成了拆分\n            if (start == s.length()) {\n                return true;\n            }\n\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length())) {\n                    return true;\n                }\n            }\n        }\n        return false;\n    }\n}",
-      "timeComplexity": "O(m × L × 2^n) 是保守上界，最坏情况呈指数增长；n 为字符串长度、m 为字典大小、L 为最长单词长度。",
-      "spaceComplexity": "O(n)，递归栈。",
+      "timeComplexity": "O(m × L × 2^n) 是保守上界，最坏情况呈指数增长；n 为字符串长度、m 为字典大小、L 为最长单词长度",
+      "spaceComplexity": "O(n)，递归栈",
       "isFinal": false,
       "explanation": "这是我在理解递归返回值后完成的版本。逻辑正确，但相同后缀会反复计算，不适合作为满足最大规模的提交版本。",
       "correctionMarkdown": "保留我的原注释和结束判断位置。字典非空使循环中的结束判断能正确执行；超时风险来自未缓存重复后缀，不是这项判断的位置。"
@@ -179,8 +179,8 @@
       "title": "记忆化搜索",
       "language": "java",
       "code": "class Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        int start = 0;\n        Boolean[] memo = new Boolean[s.length()];\n        return dfs(s, wordDict, start, memo);\n    }\n\n    private boolean dfs(String s, List<String> wordDict, int start, Boolean[] memo) {\n        // 如果已经完成了拆分\n        if (start == s.length()) {\n            return true;\n        }\n\n        // 这个后缀已经计算过，直接使用结果\n        if (memo[start] != null) {\n            return memo[start];\n        }\n\n        for (String word : wordDict) {\n            // 如果s 从下标 start 开始，以 word 开头。\n            if (s.startsWith(word, start)) {\n                if (dfs(s, wordDict, start + word.length(), memo)) {\n                    memo[start] = true;\n                    return true;\n                }\n            }\n        }\n\n        memo[start] = false;\n        return false;\n    }\n}",
-      "timeComplexity": "O(n × m × L)，n 个后缀状态，每个最多枚举 m 个单词，每次匹配最多比较 L 个字符。",
-      "spaceComplexity": "O(n)，包括缓存和最多 n + 1 层递归栈。",
+      "timeComplexity": "O(n × m × L)，n 个后缀状态，每个最多枚举 m 个单词，每次匹配最多比较 L 个字符",
+      "spaceComplexity": "O(n)，包括缓存和最多 n + 1 层递归栈",
       "isFinal": true,
       "explanation": "这是我在教练提示后亲手完成的最终版本。memo[start] 保存整个后缀的答案，null / true / false 区分未计算、可拆分、不可拆分。每次 wordBreak 新建缓存，所有递归共享同一数组。只规范排版，保留方法名、变量和全部注释。"
     }
@@ -350,5 +350,9 @@
     "source": "当前 M139 训练对话原文，保留所有可恢复教学问答和代码；仅解码 HTML 实体并规范 Java 空白。",
     "userReportedOnlineAcceptance": false
   },
-  "thinkingMarkdown": "用 dfs(start) 判断整个后缀是否可拆分，枚举匹配前缀并逐层传回成功结果；使用 Boolean[] 缓存各起点的成功或失败，消除重复子问题。"
+  "thinkingMarkdown": "用 dfs(start) 判断整个后缀是否可拆分，枚举匹配前缀并逐层传回成功结果；使用 Boolean[] 缓存各起点的成功或失败，消除重复子问题。",
+  "yuque": {
+    "targetDocId": "285641255",
+    "requireExisting": true
+  }
 }
